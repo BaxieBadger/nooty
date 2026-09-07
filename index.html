@@ -2713,7 +2713,7 @@ function renderAgenda() {
       const d = new Date(nearestDate+'T12:00:00');
       if(d < today) { projectEvents.push({ p, date: nearestDate, d, overdue: true }); return; }
       const cutoff = new Date(today); cutoff.setDate(today.getDate()+agendaDays);
-      if(d > cutoff) { noDeadlineProjects.push(p); return; }
+      if(d > cutoff) { return; } // deadline sat, men uden for det valgte tidsvindue — hverken "ingen deadline" eller vist her
       projectEvents.push({ p, date: nearestDate, d });
     });
     projectEvents.sort((a,b)=>a.date.localeCompare(b.date));

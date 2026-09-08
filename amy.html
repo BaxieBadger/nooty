@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lommepenge – Amy</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page">
+    <a href="Lommepenge.html" class="back-link">← Lommepenge</a>
+    <h1 id="childName">...</h1>
+    <p class="subtitle">Sådan ser din konto ud lige nu</p>
+
+    <div class="balance-cards">
+      <div class="balance-card lommepenge">
+        <p class="label">Lommepenge</p>
+        <p class="amount" id="lommepengeBalance">0 kr</p>
+      </div>
+      <div class="balance-card toejpenge">
+        <p class="label">Tøjpenge</p>
+        <p class="amount" id="toejpengeBalance">0 kr</p>
+      </div>
+    </div>
+
+    <p class="section-title">Seneste bevægelser</p>
+    <ul class="tx-list" id="txList">
+      <li class="empty-state">Henter...</li>
+    </ul>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/format.js"></script>
+  <script>const CHILD_SLUG = 'amy';</script>
+  <script src="js/child.js"></script>
+</body>
+</html>

@@ -153,6 +153,12 @@
   .deck-subtask-row.done{ opacity:0.55; text-decoration:line-through; }
   .deck-subtask-dot{ width:9px; height:9px; border-radius:3px; border:1.5px solid currentColor; flex:none; }
   .deck-subtask-dot.on{ background:currentColor; }
+  .deck-notes{ background:rgba(0,0,0,0.07); border-radius:var(--radius); padding:10px 14px; flex:none; }
+  .deck-notes-title{ font-size:clamp(9px,0.85vw,11px); font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:0.7; margin-bottom:6px; }
+  .deck-note-entry{ padding:5px 0; border-top:1px solid rgba(0,0,0,0.08); }
+  .deck-note-entry:first-child{ border-top:none; padding-top:0; }
+  .deck-note-time{ font-size:clamp(9px,0.8vw,10px); font-style:italic; opacity:0.65; }
+  .deck-note-text{ font-size:clamp(11px,1vw,13px); line-height:1.4; }
   .deck-done-btn{ align-self:flex-start; border:none; border-radius:999px; padding:10px 22px; font-size:clamp(12px,1.1vw,14px);
     font-weight:700; background:rgba(0,0,0,0.14); color:var(--text); flex:none; margin:14px clamp(20px,3vw,40px) clamp(20px,3vw,40px); }
   .deck-done-btn:hover{ background:rgba(0,0,0,0.22); }
@@ -578,6 +584,16 @@ function renderPillList(){
 function deckItems(){
   return state.projects.filter(p=>!p.done && p.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,10);
 }
+// Noter vist nyeste øverst, ligesom index.html/cover.html's notepaneler
+function renderDeckNotes(notesStr){
+  const lines = (notesStr||'').split('\n').filter(Boolean).reverse();
+  return lines.map(line=>{
+    const m = line.match(/^\[([^\]]+)\] (.+)$/);
+    return m
+      ? `<div class="deck-note-entry"><div class="deck-note-time">${esc(m[1])}</div><div class="deck-note-text">${esc(m[2])}</div></div>`
+      : `<div class="deck-note-entry"><div class="deck-note-text">${esc(line)}</div></div>`;
+  }).join('');
+}
 function renderDeck(){
   const items = deckItems();
   const posEl = document.getElementById('deck-pos');
@@ -620,6 +636,10 @@ function renderDeck(){
       ${children.length?`<div class="deck-subtasks">
         <div class="deck-subtasks-title">Delopgaver (${children.filter(c=>c.done).length}/${children.length})</div>
         ${children.map(c=>`<div class="deck-subtask-row ${c.done?'done':''}"><span class="deck-subtask-dot ${c.done?'on':''}"></span>${esc(c.title)}</div>`).join('')}
+      </div>`:''}
+      ${p.notes?`<div class="deck-notes">
+        <div class="deck-notes-title">Noter</div>
+        ${renderDeckNotes(p.notes)}
       </div>`:''}
     </div>
     <button class="deck-done-btn" onclick="event.stopPropagation();toggleProjectDone(${p.id})">✓ Markér færdig</button>

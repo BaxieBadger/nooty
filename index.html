@@ -3205,8 +3205,12 @@ function renderProjects() {
   const sortBy = document.getElementById('proj-sort')?.value || 'tema';
   // Kun top-niveau opgaver vises i denne visning – delopgaver (parentId sat)
   // vises udelukkende nestet under deres forældreopgave (se renderChildrenPanel),
-  // så de ikke også dukker op som selvstændige kort i roden.
-  let projects = state.projects.filter(p=>!p.parentId);
+  // så de ikke også dukker op som selvstændige kort i roden. Utriagerede
+  // indbakke-opgaver (intet type sat endnu) vises udelukkende i Indbakke-kortet
+  // på Dashboard, indtil de er kategoriseret via "Planlæg →" – ellers dukker de
+  // fejlagtigt op her som tomme "Andet"-opgaver (getOpgaveType falder tilbage
+  // til sidste type i OPGAVE_TYPES når p.type er undefined).
+  let projects = state.projects.filter(p=>!p.parentId && p.type);
 
   if(projFilter==='open') projects=projects.filter(p=>!p.done);
   if(projFilter==='high') projects=projects.filter(p=>p.prio==='high'&&!p.done);
@@ -3561,7 +3565,9 @@ const FB_EMNER = [
 
 
 function renderDashboard() {
-  const openProjects = state.projects.filter(p=>!p.done&&!p.parentId);
+  // Utriagerede indbakke-opgaver (intet type sat) tælles ikke med som "åbne opgaver" —
+  // de hører til Indbakke-kortet, ikke det generelle opgave-tal, før de er kategoriseret.
+  const openProjects = state.projects.filter(p=>!p.done&&!p.parentId&&p.type);
   const now = new Date();
   const weekEnd = new Date(now); weekEnd.setDate(now.getDate()+7);
   const todayStr = now.toISOString().split('T')[0];

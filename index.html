@@ -1867,10 +1867,19 @@ function sbHeaders() {
   };
 }
 
+// Sikrer at en hængende/blokeret netværksforespørgsel (fx en browser-extension eller
+// firewall der stille sluger requesten) aldrig kan holde app'en fastlåst for evigt —
+// aborter og lad kalderens try/catch behandle det som en fejl i stedet.
+function fetchWithTimeout(url, opts = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 async function sbUpsert(table, payload) {
   if(!sbReady) return;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${table}`, {
       method:  'POST',
       headers: sbHeaders(),
       body:    JSON.stringify(payload),
@@ -1881,7 +1890,7 @@ async function sbUpsert(table, payload) {
 async function sbSelect(table) {
   if(!sbReady) return null;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&limit=1000`, {
+    const r = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${table}?select=*&limit=1000`, {
       headers: { ...sbHeaders(), 'Range': '0-999' }
     });
     if(!r.ok) return null;

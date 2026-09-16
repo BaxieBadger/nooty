@@ -2180,13 +2180,12 @@ setInterval(updateClock,1000); updateClock();
 
 // ── NAV ──
 function nav(id) {
-  ['dashboard','projects','calendar','some','notes','diary','reports'].forEach(v => {
+  ['dashboard','projects','calendar','some','notes','diary','reports','kilder'].forEach(v => {
     document.getElementById('view-'+v).classList.toggle('active', v===id);
   });
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  const map = {dashboard:0,projects:1,calendar:2,some:3,notes:4,diary:5,reports:6};
-  const items = document.querySelectorAll('.nav-item');
-  if(items[map[id]]) items[map[id]].classList.add('active');
+  const activeNavItem = document.querySelector(`.nav-item[onclick*="nav('${id}')"]`);
+  if(activeNavItem) activeNavItem.classList.add('active');
   const titles = {dashboard:'Dashboard',projects:'Projekter',calendar:'Kalender',some:'SoMe-opslag',notes:'Notater',diary:'Opgavedagbog',reports:'Afrapportering'};
   document.getElementById('page-title').textContent = titles[id]||id;
   const newBtnLabels = {dashboard:'+ Ny opgave',projects:'+ Ny opgave',calendar:'+ Ny opgave',some:'+ Nyt opslag',notes:'+ Ny note',diary:'+ Ny opgave',reports:'+ Ny opgave'};

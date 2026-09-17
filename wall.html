@@ -59,14 +59,6 @@
   .wc-date{ font-size:clamp(9px,0.85vw,11px); color:var(--sidebar-text); text-transform:uppercase; letter-spacing:0.06em; }
 
   /* ── SPOTIFY ── */
-  .spotify-widget{ display:none; align-items:center; gap:9px; background:rgba(255,255,255,0.08); border-radius:999px; padding:4px 12px 4px 4px; }
-  .sp-art{ width:32px; height:32px; border-radius:50%; object-fit:cover; flex:none; background:rgba(255,255,255,0.15); }
-  .sp-info{ display:flex; flex-direction:column; max-width:150px; min-width:0; }
-  .sp-track{ font-size:clamp(10px,0.9vw,12px); font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .sp-artist{ font-size:clamp(8px,0.75vw,10px); color:var(--sidebar-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .sp-controls{ display:flex; gap:1px; flex:none; }
-  .sp-controls button{ border:none; background:none; color:#fff; font-size:15px; padding:4px 5px; opacity:0.85; }
-  .sp-controls button:hover{ opacity:1; }
   .sp-connect-btn{ display:none; align-items:center; gap:6px; border:none; background:rgba(255,255,255,0.1); color:#fff;
     font-size:clamp(10px,0.9vw,12px); font-weight:700; padding:8px 15px; border-radius:999px; }
   .sp-connect-btn:hover{ background:rgba(255,255,255,0.18); }
@@ -482,18 +474,6 @@ function renderShell(){
         <button class="wall-tab" onclick="switchView('kanban')">Kanban</button>
       </div>
       <div class="wall-header-right">
-        <div class="spotify-widget" id="spotify-widget">
-          <img class="sp-art" id="sp-art" src="" alt="">
-          <div class="sp-info">
-            <div class="sp-track" id="sp-track"></div>
-            <div class="sp-artist" id="sp-artist"></div>
-          </div>
-          <div class="sp-controls">
-            <button onclick="spotifyPrev()" title="Forrige">⏮</button>
-            <button onclick="spotifyToggle()" id="sp-toggle-btn" title="Afspil/pause">▶</button>
-            <button onclick="spotifyNext()" title="Næste">⏭</button>
-          </div>
-        </div>
         <button class="sp-connect-btn" id="sp-connect-btn" onclick="spotifyLogin()">🎵 Forbind Spotify</button>
       </div>
     </div>
@@ -1159,12 +1139,10 @@ async function spotifyRefreshLikeState(trackId){
 }
 
 async function spotifyPoll(){
-  const widget = document.getElementById('spotify-widget');
   const connectBtn = document.getElementById('sp-connect-btn');
   const side = document.querySelector('.wall-side');
-  if(!widget || !connectBtn) return;
+  if(!connectBtn) return;
   if(!localStorage.getItem('sp_access_token')){
-    widget.style.display = 'none';
     connectBtn.style.display = 'flex';
     if(side) side.classList.remove('has-spotify');
     spStopProgressTicker();
@@ -1172,7 +1150,6 @@ async function spotifyPoll(){
   }
   const data = await spotifyApi('/me/player');
   if(!data || !data.item){
-    widget.style.display = 'none';
     connectBtn.style.display = 'flex';
     connectBtn.textContent = '🎵 Intet afspilles';
     if(side) side.classList.remove('has-spotify');
@@ -1180,12 +1157,7 @@ async function spotifyPoll(){
     return;
   }
   connectBtn.style.display = 'none';
-  widget.style.display = 'flex';
   const art = data.item.album?.images?.[2]?.url || data.item.album?.images?.[data.item.album.images.length-1]?.url || '';
-  document.getElementById('sp-art').src = art;
-  document.getElementById('sp-track').textContent = data.item.name;
-  document.getElementById('sp-artist').textContent = (data.item.artists||[]).map(a=>a.name).join(', ');
-  document.getElementById('sp-toggle-btn').textContent = data.is_playing ? '⏸' : '▶';
 
   if(side) side.classList.add('has-spotify');
   const wspArt = document.getElementById('wsp-art');

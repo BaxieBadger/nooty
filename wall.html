@@ -156,10 +156,37 @@
   .deck-done-btn:hover{ background:rgba(0,0,0,0.22); }
   .deck-empty{ flex:1; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--text-muted); }
 
-  /* ── OVERVIEW: HØJRE SIDE — SoMe (2 kolonner) + Spotify (når aktiv) + Indbakke ── */
+  /* ── OVERVIEW: HØJRE SIDE — SoMe-deck + SoMe-liste + Spotify (når aktiv) + Indbakke ── */
   .wall-side{ flex:0 0 30%; min-width:0; display:flex; flex-direction:column; border-left:1px solid var(--border); }
-  .wall-some-cols{ flex:0 0 50%; min-height:0; overflow-y:auto; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
-  .wall-side.has-spotify .wall-some-cols{ flex-basis:38%; }
+
+  /* SoMe: mini swipe-deck over de næste opslag pr. platform */
+  .wall-some-deck{ flex:0 0 25%; min-height:0; display:flex; flex-direction:column; padding:clamp(12px,1.4vw,18px) clamp(14px,1.6vw,20px) clamp(10px,1.2vw,14px);
+    border-bottom:1px solid var(--border); }
+  .wsd-org-toggle{ display:flex; gap:3px; background:var(--surface2); border-radius:999px; padding:3px; margin-bottom:6px; flex:none; }
+  .wsd-org-btn{ flex:1; min-width:0; border:none; background:none; color:var(--text-muted); font-size:clamp(9px,0.85vw,10.5px);
+    font-weight:700; padding:5px 6px; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wsd-org-btn.active{ background:var(--accent); color:#fff; }
+  .wsd-head{ display:flex; align-items:center; flex:none; margin-bottom:6px; }
+  .wsd-pos{ font-size:clamp(9px,0.85vw,10px); font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); }
+  .wsd-dots{ margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; max-width:60%; }
+  .wsd-dot{ width:6px; height:6px; border-radius:999px; background:var(--surface2); border:none; padding:0; }
+  .wsd-dot.active{ background:var(--accent); }
+  .wsd-swipe{ flex:1; min-height:0; position:relative; touch-action:pan-y; }
+  .wsd-card{ position:absolute; inset:0; border-radius:var(--radius); background:var(--surface2); color:var(--text);
+    padding:clamp(10px,1.2vw,14px); overflow:hidden; display:flex; flex-direction:column; gap:5px; cursor:grab; touch-action:pan-y; }
+  .wsd-card.dragging{ transition:none; cursor:grabbing; }
+  .wsd-card-top{ display:flex; gap:5px; align-items:center; flex-wrap:wrap; flex:none; }
+  .wsd-pill{ font-size:9px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; flex:none; }
+  .wsd-org-pill{ font-size:9px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--surface); color:var(--text-muted); flex:none; }
+  .wsd-title{ font-size:clamp(12px,1.1vw,14px); font-weight:700; line-height:1.25; flex:none;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .wsd-desc{ font-size:clamp(10px,0.9vw,12px); color:var(--text-muted); line-height:1.35; flex:1; min-height:0;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+  .wsd-date{ font-size:clamp(9px,0.85vw,11px); font-weight:700; color:var(--text-muted); flex:none; margin-top:auto; }
+  .wsd-empty{ flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px; text-align:center; }
+
+  .wall-some-cols{ flex:0 0 45%; min-height:0; overflow-y:auto; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
+  .wall-side.has-spotify .wall-some-cols{ flex-basis:35%; }
   .some-cols-row{ display:flex; gap:14px; margin-top:8px; }
   .some-col{ flex:1; min-width:0; }
   .some-col-title{ font-size:clamp(12px,1.1vw,14px); font-weight:700; color:var(--text-muted); margin-bottom:6px; }
@@ -172,7 +199,7 @@
   .some-item-date{ font-size:clamp(10px,0.9vw,12px); color:var(--text-muted); flex:none; }
 
   /* ── OVERVIEW: SPOTIFY-KONTROLPANEL (vises kun når noget er aktivt) ── */
-  .wall-spotify-panel{ display:none; flex:0 0 24%; min-height:0; overflow:hidden; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
+  .wall-spotify-panel{ display:none; flex:0 0 20%; min-height:0; overflow:hidden; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
   .wall-side.has-spotify .wall-spotify-panel{ display:flex; flex-direction:column; }
   .wsp-now{ display:flex; align-items:center; gap:10px; margin-top:8px; min-width:0; }
   .wsp-art{ width:44px; height:44px; border-radius:10px; object-fit:cover; flex:none; background:var(--surface2); }
@@ -490,6 +517,19 @@ function renderShell(){
           </div>
         </div>
         <div class="wall-side">
+          <div class="wall-some-deck">
+            <div class="wsd-org-toggle">
+              <button class="wsd-org-btn" id="wsd-org-sport" onclick="setSomeOrgFilter('sport')">Sport for Livet</button>
+              <button class="wsd-org-btn" id="wsd-org-lvs" onclick="setSomeOrgFilter('lvs')">LVS</button>
+            </div>
+            <div class="wsd-head">
+              <span class="wsd-pos" id="wsd-pos"></span>
+              <div class="wsd-dots" id="wsd-dots"></div>
+            </div>
+            <div class="wsd-swipe" id="wsd-swipe">
+              <div class="wsd-card" id="wsd-card"></div>
+            </div>
+          </div>
           <div class="wall-some-cols">
             <div class="wall-panel-title">SoMe – kommende opslag</div>
             <div class="some-cols-row">
@@ -556,6 +596,7 @@ function renderShell(){
   </div>`;
 
   bindDeckDrag();
+  bindSomeDeckDrag();
   updateWallClock();
   switchView(currentView);
 }
@@ -756,6 +797,101 @@ function renderSomeColumns(){
   renderCol('lvs', 'some-list-lvs');
 }
 
+// ══════════════════════════ OVERVIEW: SOME MINI-DECK (næste opslag pr. platform) ══════════════════════════
+const SOME_ORG_LABELS = { sport:'Sport for Livet', lvs:'LVS' };
+let someDeckIndex = 0, someDrag = 0, someDragging = false, someDragStartX = 0;
+let someOrgFilter = 'sport';
+
+function setSomeOrgFilter(org){
+  if(someOrgFilter === org) return;
+  someOrgFilter = org;
+  someDeckIndex = 0; someDrag = 0;
+  updateSomeDeckTransform();
+  renderSomeDeck();
+}
+function someDeckItems(){
+  const today = dateStr(new Date());
+  return (state.some||[])
+    .filter(s=>!s.finishedAt && s.postDato && s.postDato>=today && s.orgEnhed===someOrgFilter)
+    .sort((a,b)=>a.postDato.localeCompare(b.postDato));
+}
+function renderSomeDeck(){
+  const sportBtn = document.getElementById('wsd-org-sport');
+  const lvsBtn = document.getElementById('wsd-org-lvs');
+  if(sportBtn) sportBtn.classList.toggle('active', someOrgFilter==='sport');
+  if(lvsBtn) lvsBtn.classList.toggle('active', someOrgFilter==='lvs');
+
+  const items = someDeckItems();
+  const posEl = document.getElementById('wsd-pos');
+  const dotsEl = document.getElementById('wsd-dots');
+  const cardEl = document.getElementById('wsd-card');
+  if(!posEl || !cardEl) return;
+
+  if(!items.length){
+    posEl.textContent = '';
+    dotsEl.innerHTML = '';
+    cardEl.innerHTML = `<div class="wsd-empty">Ingen kommende opslag for ${esc(SOME_ORG_LABELS[someOrgFilter]||'')}</div>`;
+    return;
+  }
+  if(someDeckIndex >= items.length) someDeckIndex = items.length-1;
+  if(someDeckIndex < 0) someDeckIndex = 0;
+
+  posEl.textContent = `Opslag ${someDeckIndex+1} af ${items.length}`;
+  dotsEl.innerHTML = items.map((_,i)=>`<button class="wsd-dot ${i===someDeckIndex?'active':''}" onclick="goToSomeDeck(${i})"></button>`).join('');
+
+  const s = items[someDeckIndex];
+  const pc = platColor(s.platform);
+  cardEl.innerHTML = `
+    <div class="wsd-card-top">
+      <span class="wsd-pill" style="background:${pc.bg};">${esc(s.platform||'')}</span>
+      <span class="wsd-org-pill">${esc(SOME_ORG_LABELS[s.orgEnhed] || s.orgEnhed || '')}</span>
+    </div>
+    <div class="wsd-title">${esc(s.emne || 'Opslag')}</div>
+    ${s.content ? `<div class="wsd-desc">${esc(s.content)}</div>` : ''}
+    <div class="wsd-date">${formatDate(s.postDato)}</div>
+  `;
+}
+function goToSomeDeck(i){ someDeckIndex=i; someDrag=0; updateSomeDeckTransform(); renderSomeDeck(); }
+function goSomeDeck(delta){
+  const items = someDeckItems();
+  if(!items.length) return;
+  someDeckIndex = (someDeckIndex+delta+items.length)%items.length;
+  someDrag=0; updateSomeDeckTransform(); renderSomeDeck();
+}
+function bindSomeDeckDrag(){
+  const swipe = document.getElementById('wsd-swipe');
+  if(!swipe) return;
+
+  function onMove(e){
+    if(!someDragging) return;
+    someDrag = e.clientX - someDragStartX;
+    updateSomeDeckTransform();
+  }
+  function onUp(){
+    if(!someDragging) return;
+    someDragging = false;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    if(someDrag < -50) goSomeDeck(1);
+    else if(someDrag > 50) goSomeDeck(-1);
+    else { someDrag=0; updateSomeDeckTransform(); }
+  }
+  swipe.addEventListener('pointerdown', (e)=>{
+    someDragStartX = e.clientX; someDragging = true; someDrag = 0; updateSomeDeckTransform();
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  });
+}
+function updateSomeDeckTransform(){
+  const card = document.getElementById('wsd-card');
+  if(!card) return;
+  card.classList.toggle('dragging', someDragging);
+  const dragX = Math.max(-70,Math.min(70,someDrag));
+  card.style.transform = `translateX(${dragX}px) rotate(${(someDrag*0.02).toFixed(2)}deg)`;
+}
+
 // ══════════════════════════ OVERVIEW: INDBAKKE ══════════════════════════
 function renderInboxList(){
   const el = document.getElementById('inbox-list-items');
@@ -777,6 +913,7 @@ function renderInboxList(){
 function renderOverview(){
   renderDeck();
   renderPillList();
+  renderSomeDeck();
   renderSomeColumns();
   renderInboxList();
 }

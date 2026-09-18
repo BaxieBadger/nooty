@@ -402,6 +402,7 @@ const OPGAVE_TYPES = [
 ];
 function getOpgaveType(id){ return OPGAVE_TYPES.find(t=>t.id===id) || OPGAVE_TYPES[OPGAVE_TYPES.length-1]; }
 function isArtikelOpgave(p){ return p && p.type==='vaeresteds' && p.underkat==='Artikel'; }
+function isFolkemoedeOpgave(p){ return p && p.type==='aktivitet' && p.underkat==='Folkemøde'; }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatDate(d){ if(!d) return ''; const dt=new Date(d+'T12:00:00'); const M=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec']; return `${dt.getDate()}. ${M[dt.getMonth()]}`; }
 function dateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -425,7 +426,11 @@ let SUPABASE_KEY = localStorage.getItem('fb_sb_key') || '';
 let sbReady = false;
 let currentView = 'overview'; // 'overview' | 'calendar' | 'kanban'
 let mainDeckFilter = 'opgaver'; // 'opgaver' | 'avis' — styrer både deck og venstre rail
-function matchesDeckFilter(p){ return mainDeckFilter==='avis' ? isArtikelOpgave(p) : !isArtikelOpgave(p); }
+function matchesDeckFilter(p){
+  if(mainDeckFilter==='avis') return isArtikelOpgave(p);
+  if(mainDeckFilter==='folkemode') return isFolkemoedeOpgave(p);
+  return !isArtikelOpgave(p) && !isFolkemoedeOpgave(p);
+}
 function setDeckFilter(f){
   if(mainDeckFilter===f) return;
   mainDeckFilter = f;
@@ -517,6 +522,7 @@ function renderShell(){
           <div class="deck-filter-toggle">
             <button class="deck-filter-btn" id="df-opgaver" onclick="setDeckFilter('opgaver')">Opgaver</button>
             <button class="deck-filter-btn" id="df-avis" onclick="setDeckFilter('avis')">Værestedsavisen</button>
+            <button class="deck-filter-btn" id="df-folkemode" onclick="setDeckFilter('folkemode')">Folkemøde</button>
           </div>
           <div class="deck-head">
             <span class="deck-pos" id="deck-pos"></span>
@@ -691,7 +697,7 @@ function allDeckItems(){
 function goToTaskInDeck(id){
   const p = state.projects.find(x=>x.id===id);
   if(!p) return;
-  mainDeckFilter = isArtikelOpgave(p) ? 'avis' : 'opgaver';
+  mainDeckFilter = isArtikelOpgave(p) ? 'avis' : isFolkemoedeOpgave(p) ? 'folkemode' : 'opgaver';
   const idx = deckItems().findIndex(x=>x.id===id);
   goToDeck(idx<0?0:idx);
 }
@@ -708,8 +714,10 @@ function renderDeckNotes(notesStr){
 function renderDeck(){
   const dfOpgaverBtn = document.getElementById('df-opgaver');
   const dfAvisBtn = document.getElementById('df-avis');
+  const dfFolkemodeBtn = document.getElementById('df-folkemode');
   if(dfOpgaverBtn) dfOpgaverBtn.classList.toggle('active', mainDeckFilter==='opgaver');
   if(dfAvisBtn) dfAvisBtn.classList.toggle('active', mainDeckFilter==='avis');
+  if(dfFolkemodeBtn) dfFolkemodeBtn.classList.toggle('active', mainDeckFilter==='folkemode');
 
   const items = deckItems();
   const posEl = document.getElementById('deck-pos');

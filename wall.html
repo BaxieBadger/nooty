@@ -113,12 +113,17 @@
   .up-item{ display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:none; border-radius:999px;
     padding:8px 12px; font-size:clamp(11px,1vw,12px); font-weight:600; background:color-mix(in srgb, var(--sage-100) 11%, transparent); color:var(--sage-100); flex:none; }
   .up-item.active{ background:var(--sage-500); }
+  .up-item .u-dot{ width:8px; height:8px; border-radius:3px; flex:none; }
   .up-item .t{ font-size:clamp(13px,1.2vw,15px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
   .up-item .d{ font-size:clamp(9px,0.85vw,10.5px); opacity:.85; flex:none; }
   .empty-hint{ font-size:clamp(10px,0.9vw,11.5px); color:var(--sidebar-text); opacity:.7; }
 
   /* ── OVERVIEW: SWIPEABLE DECK ── */
   .wall-deck{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; padding:clamp(14px,1.8vw,26px); overflow:hidden; }
+  .deck-filter-toggle{ display:flex; gap:4px; background:var(--surface2); border-radius:999px; padding:4px; margin-bottom:10px; flex:none; }
+  .deck-filter-btn{ flex:1; min-width:0; border:none; background:none; color:var(--text-muted); font-size:clamp(11px,1vw,13px);
+    font-weight:700; padding:7px 16px; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .deck-filter-btn.active{ background:var(--accent); color:#fff; }
   .deck-head{ display:flex; align-items:center; margin-bottom:10px; flex:none; }
   .deck-pos{ font-size:clamp(10px,0.9vw,12px); font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); }
   .deck-dots{ margin-left:auto; display:flex; gap:5px; flex-wrap:wrap; max-width:50%; justify-content:flex-end; }
@@ -141,8 +146,6 @@
   .deck-parent{ font-size:clamp(11px,1vw,13px); opacity:0.75; flex:none; }
   .deck-subtasks{ background:rgba(0,0,0,0.07); border-radius:var(--radius); padding:10px 14px; flex:none; }
   .deck-subtasks-title{ font-size:clamp(9px,0.85vw,11px); font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:0.7; margin-bottom:6px; }
-  .deck-subtasks-artikler{ border:1px solid currentColor; border-color:rgba(0,0,0,0.18); border-radius:var(--radius); padding:0 10px 6px; margin-bottom:8px; }
-  .deck-subtasks-artikler .deck-subtasks-title{ margin-top:8px; }
   .deck-subtask-row{ display:flex; align-items:center; gap:8px; padding:3px 0; font-size:clamp(11px,1vw,13px); }
   .deck-subtask-row.done{ opacity:0.55; text-decoration:line-through; }
   .deck-subtask-dot{ width:9px; height:9px; border-radius:3px; border:1.5px solid currentColor; flex:none; }
@@ -162,7 +165,7 @@
   .wall-side{ flex:0 0 30%; min-width:0; display:flex; flex-direction:column; border-left:1px solid var(--border); }
 
   /* SoMe: mini swipe-deck over de næste opslag pr. platform */
-  .wall-some-deck{ flex:0 0 25%; min-height:0; display:flex; flex-direction:column; padding:clamp(12px,1.4vw,18px) clamp(14px,1.6vw,20px) clamp(10px,1.2vw,14px);
+  .wall-some-deck{ flex:0 0 22%; min-height:0; display:flex; flex-direction:column; padding:clamp(12px,1.4vw,18px) clamp(14px,1.6vw,20px) clamp(10px,1.2vw,14px);
     border-bottom:1px solid var(--border); }
   .wsd-org-toggle{ display:flex; gap:3px; background:var(--surface2); border-radius:999px; padding:3px; margin-bottom:6px; flex:none; }
   .wsd-org-btn{ flex:1; min-width:0; border:none; background:none; color:var(--text-muted); font-size:clamp(9px,0.85vw,10.5px);
@@ -187,8 +190,8 @@
   .wsd-date{ font-size:clamp(9px,0.85vw,11px); font-weight:700; color:var(--text-muted); flex:none; margin-top:auto; }
   .wsd-empty{ flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px; text-align:center; }
 
-  .wall-some-cols{ flex:0 0 45%; min-height:0; overflow-y:auto; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
-  .wall-side.has-spotify .wall-some-cols{ flex-basis:35%; }
+  .wall-some-cols{ flex:0 0 28%; min-height:0; overflow-y:auto; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
+  .wall-side.has-spotify .wall-some-cols{ flex-basis:24%; }
   .some-cols-row{ display:flex; gap:14px; margin-top:8px; }
   .some-col{ flex:1; min-width:0; }
   .some-col-title{ font-size:clamp(12px,1.1vw,14px); font-weight:700; color:var(--text-muted); margin-bottom:6px; }
@@ -200,8 +203,18 @@
   .some-item-sub{ font-size:clamp(10px,0.9vw,12px); color:var(--text-muted); }
   .some-item-date{ font-size:clamp(10px,0.9vw,12px); color:var(--text-muted); flex:none; }
 
+  /* ── OVERVIEW: AVIS (altid synlig — alle Værestedsavisen-opgaver samlet) ── */
+  .wall-avis-panel{ flex:0 0 18%; min-height:0; overflow-y:auto; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
+  .avis-group-title{ font-size:clamp(9px,0.85vw,10px); font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin:8px 0 3px; }
+  .avis-group-title:first-child{ margin-top:0; }
+  .avis-item{ display:flex; align-items:center; gap:7px; padding:4px 0; border-bottom:1px solid var(--border); }
+  .avis-item:last-child{ border-bottom:none; }
+  .avis-dot{ width:7px; height:7px; border-radius:50%; background:var(--accent); flex:none; }
+  .avis-item-title{ font-size:clamp(12px,1.1vw,14px); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .avis-item-date{ font-size:clamp(10px,0.9vw,12px); color:var(--text-muted); flex:none; }
+
   /* ── OVERVIEW: SPOTIFY-KONTROLPANEL (vises kun når noget er aktivt) ── */
-  .wall-spotify-panel{ display:none; flex:0 0 20%; min-height:0; overflow:hidden; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
+  .wall-spotify-panel{ display:none; flex:0 0 15%; min-height:0; overflow:hidden; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
   .wall-side.has-spotify .wall-spotify-panel{ display:flex; flex-direction:column; }
   .wsp-now{ display:flex; align-items:center; gap:10px; margin-top:8px; min-width:0; }
   .wsp-art{ width:44px; height:44px; border-radius:10px; object-fit:cover; flex:none; background:var(--surface2); }
@@ -399,9 +412,7 @@ const OPGAVE_TYPES = [
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.15em;flex-shrink:0"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>' },
 ];
 function getOpgaveType(id){ return OPGAVE_TYPES.find(t=>t.id===id) || OPGAVE_TYPES[OPGAVE_TYPES.length-1]; }
-// En artikel er en delopgave under Værestedsavisen, hvis titel starter med "Artikel" —
-// samme konvention som i index.html, intet særskilt felt.
-function isArtikelOpgave(p){ return p && p.type==='vaeresteds' && /^artikel/i.test((p.title||'').trim()); }
+function isArtikelOpgave(p){ return p && p.type==='vaeresteds' && p.underkat==='Artikel'; }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatDate(d){ if(!d) return ''; const dt=new Date(d+'T12:00:00'); const M=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec']; return `${dt.getDate()}. ${M[dt.getMonth()]}`; }
 function dateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -432,6 +443,15 @@ let SUPABASE_URL = localStorage.getItem('fb_sb_url') || '';
 let SUPABASE_KEY = localStorage.getItem('fb_sb_key') || '';
 let sbReady = false;
 let currentView = 'overview'; // 'overview' | 'calendar' | 'kanban'
+let mainDeckFilter = 'opgaver'; // 'opgaver' | 'avis' — styrer både deck og venstre rail
+function matchesDeckFilter(p){ return mainDeckFilter==='avis' ? p.type==='vaeresteds' : p.type!=='vaeresteds'; }
+function setDeckFilter(f){
+  if(mainDeckFilter===f) return;
+  mainDeckFilter = f;
+  deckIndex = 0; drag = 0;
+  updateDeckTransform();
+  renderOverview();
+}
 let deckIndex = 0;
 let calMonth = new Date().getMonth(), calYear = new Date().getFullYear();
 let drag = 0, dragging = false, dragStartX = 0;
@@ -513,6 +533,10 @@ function renderShell(){
       <div class="wall-view" id="view-overview">
         <div class="wall-pills" id="wall-pills"></div>
         <div class="wall-deck">
+          <div class="deck-filter-toggle">
+            <button class="deck-filter-btn" id="df-opgaver" onclick="setDeckFilter('opgaver')">Opgaver</button>
+            <button class="deck-filter-btn" id="df-avis" onclick="setDeckFilter('avis')">Værestedsavisen</button>
+          </div>
           <div class="deck-head">
             <span class="deck-pos" id="deck-pos"></span>
             <div class="deck-dots" id="deck-dots"></div>
@@ -547,6 +571,10 @@ function renderShell(){
                 <div id="some-list-lvs"></div>
               </div>
             </div>
+          </div>
+          <div class="wall-avis-panel">
+            <div class="wall-panel-title">📰 Avis</div>
+            <div id="avis-list-items"></div>
           </div>
           <div class="wall-spotify-panel" id="wall-spotify-panel">
             <div class="wall-panel-title">Spotify</div>
@@ -629,6 +657,8 @@ function renderPillList(){
   const el = document.getElementById('wall-pills');
   if(!el) return;
 
+  // Fuldt overblik, uanset hvad der er valgt i deck-toggle'et — kun selve deck-kortet
+  // og "Næste deadline"-klik skifter mellem Opgaver/Værestedsavisen.
   const open = state.projects.filter(p=>!p.done && !p.parentId && p.type);
   const inbox = state.projects.filter(p=>!p.done && !p.parentId && !p.type);
   const today = todayStr();
@@ -643,9 +673,8 @@ function renderPillList(){
   const stops = Object.keys(counts).map(k=>{ const from=acc/total*100; acc+=counts[k]; return getOpgaveType(k).color+' '+from.toFixed(1)+'% '+(acc/total*100).toFixed(1)+'%'; });
   const donutBg = stops.length ? `conic-gradient(${stops.join(', ')})` : 'conic-gradient(var(--neutral-400) 0 100%)';
 
-  const items = deckItems();
-  const upNext = items.slice(0,10);
-  const activeTask = items[deckIndex];
+  const upNext = allDeckItems().slice(0,10);
+  const activeTask = deckItems()[deckIndex];
 
   el.innerHTML = `
     <div class="rail-head">
@@ -665,7 +694,8 @@ function renderPillList(){
     </div>
     <div class="rail-next">
       <div class="rail-next-title">NÆSTE DEADLINE</div>
-      ${upNext.length ? upNext.map(t=>`<button class="up-item ${activeTask&&t.id===activeTask.id?'active':''}" onclick="goToDeck(deckItems().findIndex(x=>x.id===${t.id}))">
+      ${upNext.length ? upNext.map(t=>`<button class="up-item ${activeTask&&t.id===activeTask.id?'active':''}" onclick="goToTaskInDeck(${t.id})">
+        <span class="u-dot" style="background:${getOpgaveType(t.type).color};"></span>
         <span class="t">${esc(t.title)}</span><span class="d">${formatDate(t.deadline)}</span>
       </button>`).join('') : '<div class="empty-hint">Ingen åbne opgaver</div>'}
     </div>
@@ -674,9 +704,23 @@ function renderPillList(){
 
 // ══════════════════════════ OVERVIEW: SWIPEABLE DECK (næste 10) ══════════════════════════
 function deckItems(){
-  // Delopgaver (fx artikler under en avis-opgave) skal kun vises inde i deres
-  // forældre-opgaves kort, ikke som selvstændige kort i deck'et.
+  // Delopgaver skal kun vises inde i deres forældre-opgaves kort, ikke som
+  // selvstændige kort i deck'et. mainDeckFilter styrer om det er avis- eller
+  // almindelige opgaver, der vises.
+  return state.projects.filter(p=>!p.done && !p.parentId && p.deadline && matchesDeckFilter(p)).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,10);
+}
+// Samme som deckItems(), men uden filter — bruges til "Næste deadline" i venstre
+// rail, så den altid viser det fulde overblik uanset deck-toggle'et.
+function allDeckItems(){
   return state.projects.filter(p=>!p.done && !p.parentId && p.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,10);
+}
+// Klik i "Næste deadline": skift deck-toggle til den bucket, opgaven hører til, og hop til den.
+function goToTaskInDeck(id){
+  const p = state.projects.find(x=>x.id===id);
+  if(!p) return;
+  mainDeckFilter = p.type==='vaeresteds' ? 'avis' : 'opgaver';
+  const idx = deckItems().findIndex(x=>x.id===id);
+  goToDeck(idx<0?0:idx);
 }
 // Noter vist nyeste øverst, ligesom index.html/cover.html's notepaneler
 function renderDeckNotes(notesStr){
@@ -689,6 +733,11 @@ function renderDeckNotes(notesStr){
   }).join('');
 }
 function renderDeck(){
+  const dfOpgaverBtn = document.getElementById('df-opgaver');
+  const dfAvisBtn = document.getElementById('df-avis');
+  if(dfOpgaverBtn) dfOpgaverBtn.classList.toggle('active', mainDeckFilter==='opgaver');
+  if(dfAvisBtn) dfAvisBtn.classList.toggle('active', mainDeckFilter==='avis');
+
   const items = deckItems();
   const posEl = document.getElementById('deck-pos');
   const dotsEl = document.getElementById('deck-dots');
@@ -714,9 +763,6 @@ function renderDeck(){
   const overdue = p.deadline < dateStr(new Date());
   const parent = p.parentId ? state.projects.find(x=>x.id===p.parentId) : null;
   const children = state.projects.filter(c=>c.parentId===p.id);
-  const artikler = children.filter(c=>isArtikelOpgave(c));
-  const andreChildren = children.filter(c=>!isArtikelOpgave(c));
-  const subtaskRow = c => `<div class="deck-subtask-row ${c.done?'done':''}"><span class="deck-subtask-dot ${c.done?'on':''}"></span>${esc(c.title)}</div>`;
 
   cardEl.style.background = type.color;
   cardEl.innerHTML = `
@@ -732,11 +778,7 @@ function renderDeck(){
       ${p.desc?`<div class="deck-desc">${esc(p.desc)}</div>`:''}
       ${children.length?`<div class="deck-subtasks">
         <div class="deck-subtasks-title">Delopgaver (${children.filter(c=>c.done).length}/${children.length})</div>
-        ${artikler.length?`<div class="deck-subtasks-artikler">
-          <div class="deck-subtasks-title">Artikler</div>
-          ${artikler.map(subtaskRow).join('')}
-        </div>`:''}
-        ${andreChildren.map(subtaskRow).join('')}
+        ${children.map(c=>`<div class="deck-subtask-row ${c.done?'done':''}"><span class="deck-subtask-dot ${c.done?'on':''}"></span>${esc(c.title)}</div>`).join('')}
       </div>`:''}
       ${p.notes?`<div class="deck-notes">
         <div class="deck-notes-title">Noter</div>
@@ -924,11 +966,31 @@ function renderInboxList(){
     </div>`).join('');
 }
 
+// ══════════════════════════ OVERVIEW: AVIS (altid synlig — alle Værestedsavisen-opgaver) ══════════════════════════
+function renderAvisPanel(){
+  const el = document.getElementById('avis-list-items');
+  if(!el) return;
+  const items = state.projects.filter(p=>p.type==='vaeresteds' && !p.done && !p.parentId);
+  if(!items.length){ el.innerHTML = '<div class="dl-empty">Ingen avis-opgaver</div>'; return; }
+  const groups = ['Artikel','Administrativt','Andet'];
+  el.innerHTML = groups.map(g=>{
+    const rows = items.filter(p=>(p.underkat||'Andet')===g);
+    if(!rows.length) return '';
+    return `<div class="avis-group-title">${esc(g)}</div>
+      ${rows.map(p=>`<div class="avis-item">
+        <span class="avis-dot"></span>
+        <span class="avis-item-title">${esc(p.title)}</span>
+        ${p.deadline?`<span class="avis-item-date">${formatDate(p.deadline)}</span>`:''}
+      </div>`).join('')}`;
+  }).join('');
+}
+
 function renderOverview(){
   renderDeck();
   renderPillList();
   renderSomeDeck();
   renderSomeColumns();
+  renderAvisPanel();
   renderInboxList();
 }
 

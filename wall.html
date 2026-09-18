@@ -141,6 +141,8 @@
   .deck-parent{ font-size:clamp(11px,1vw,13px); opacity:0.75; flex:none; }
   .deck-subtasks{ background:rgba(0,0,0,0.07); border-radius:var(--radius); padding:10px 14px; flex:none; }
   .deck-subtasks-title{ font-size:clamp(9px,0.85vw,11px); font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:0.7; margin-bottom:6px; }
+  .deck-subtasks-artikler{ border:1px solid currentColor; border-color:rgba(0,0,0,0.18); border-radius:var(--radius); padding:0 10px 6px; margin-bottom:8px; }
+  .deck-subtasks-artikler .deck-subtasks-title{ margin-top:8px; }
   .deck-subtask-row{ display:flex; align-items:center; gap:8px; padding:3px 0; font-size:clamp(11px,1vw,13px); }
   .deck-subtask-row.done{ opacity:0.55; text-decoration:line-through; }
   .deck-subtask-dot{ width:9px; height:9px; border-radius:3px; border:1.5px solid currentColor; flex:none; }
@@ -397,6 +399,9 @@ const OPGAVE_TYPES = [
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.15em;flex-shrink:0"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>' },
 ];
 function getOpgaveType(id){ return OPGAVE_TYPES.find(t=>t.id===id) || OPGAVE_TYPES[OPGAVE_TYPES.length-1]; }
+// En artikel er en delopgave under Værestedsavisen, hvis titel starter med "Artikel" —
+// samme konvention som i index.html, intet særskilt felt.
+function isArtikelOpgave(p){ return p && p.type==='vaeresteds' && /^artikel/i.test((p.title||'').trim()); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatDate(d){ if(!d) return ''; const dt=new Date(d+'T12:00:00'); const M=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec']; return `${dt.getDate()}. ${M[dt.getMonth()]}`; }
 function dateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -669,7 +674,9 @@ function renderPillList(){
 
 // ══════════════════════════ OVERVIEW: SWIPEABLE DECK (næste 10) ══════════════════════════
 function deckItems(){
-  return state.projects.filter(p=>!p.done && p.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,10);
+  // Delopgaver (fx artikler under en avis-opgave) skal kun vises inde i deres
+  // forældre-opgaves kort, ikke som selvstændige kort i deck'et.
+  return state.projects.filter(p=>!p.done && !p.parentId && p.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,10);
 }
 // Noter vist nyeste øverst, ligesom index.html/cover.html's notepaneler
 function renderDeckNotes(notesStr){
@@ -707,6 +714,9 @@ function renderDeck(){
   const overdue = p.deadline < dateStr(new Date());
   const parent = p.parentId ? state.projects.find(x=>x.id===p.parentId) : null;
   const children = state.projects.filter(c=>c.parentId===p.id);
+  const artikler = children.filter(c=>isArtikelOpgave(c));
+  const andreChildren = children.filter(c=>!isArtikelOpgave(c));
+  const subtaskRow = c => `<div class="deck-subtask-row ${c.done?'done':''}"><span class="deck-subtask-dot ${c.done?'on':''}"></span>${esc(c.title)}</div>`;
 
   cardEl.style.background = type.color;
   cardEl.innerHTML = `
@@ -722,7 +732,11 @@ function renderDeck(){
       ${p.desc?`<div class="deck-desc">${esc(p.desc)}</div>`:''}
       ${children.length?`<div class="deck-subtasks">
         <div class="deck-subtasks-title">Delopgaver (${children.filter(c=>c.done).length}/${children.length})</div>
-        ${children.map(c=>`<div class="deck-subtask-row ${c.done?'done':''}"><span class="deck-subtask-dot ${c.done?'on':''}"></span>${esc(c.title)}</div>`).join('')}
+        ${artikler.length?`<div class="deck-subtasks-artikler">
+          <div class="deck-subtasks-title">Artikler</div>
+          ${artikler.map(subtaskRow).join('')}
+        </div>`:''}
+        ${andreChildren.map(subtaskRow).join('')}
       </div>`:''}
       ${p.notes?`<div class="deck-notes">
         <div class="deck-notes-title">Noter</div>

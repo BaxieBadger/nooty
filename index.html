@@ -1814,7 +1814,7 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
 const OPGAVE_TYPES = [
   { id:'vaeresteds',     navn:'Værestedsavisen', emoji:'📰', color:'#F0E175',
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.15em;flex-shrink:0"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>',
-    underkategorier:['Artikel','Administrativt','Andet'] },
+    underkategorier:['Avis','Administrativt','Andet'] },
   { id:'projekt',        navn:'Projekt',         emoji:'🧩', color:'#a9c692',
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em;vertical-align:-0.15em;flex-shrink:0"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg>',
     underkategorier:['Craft','Sundhed','Natur','Det Digitale Værested','Andet'] },
@@ -1830,8 +1830,9 @@ const OPGAVE_TYPES = [
 ];
 function getOpgaveType(id) { return OPGAVE_TYPES.find(t=>t.id===id) || OPGAVE_TYPES[OPGAVE_TYPES.length-1]; }
 function getUnderkategorier(typeId) { return getOpgaveType(typeId).underkategorier; }
-// Er en opgave (parent eller delopgave) en Artikel under Værestedsavisen – styrer interview-panelet
-function isArtikelOpgave(p) { return p && p.type==='vaeresteds' && p.underkat==='Artikel'; }
+// En artikel er en delopgave under Værestedsavisen, hvis titel starter med "Artikel" —
+// ingen separat underkategori for det; man skriver det bare ind i titlen.
+function isArtikelOpgave(p) { return p && p.type==='vaeresteds' && /^artikel/i.test((p.title||'').trim()); }
 
 // ── STATE ──
 let state = {
@@ -2323,7 +2324,7 @@ function _migGuessType(p) {
 }
 function _migGuessUnderkat(p, typeId) {
   const opts = getUnderkategorier(typeId);
-  if(typeId==='vaeresteds') return p.cat==='Artikel' ? 'Artikel' : 'Andet';
+  if(typeId==='vaeresteds') return 'Andet';
   if(typeId==='kommunikation') return opts.includes(p.cat) ? p.cat : (p.cat==='Kommunikationsflow'?'Intern':'Website');
   return opts.includes('Andet') ? 'Andet' : opts[0];
 }
@@ -3795,9 +3796,12 @@ function renderDashboardAvis() {
     tryk.style.color = trykDate ? '#265E3A' : 'var(--text-muted)';
   }
 
-  const avisProjs = state.projects.filter(p=>p.type==='vaeresteds'&&!p.done&&!p.parentId);
+  // Én sektion pr. avis-opgave (øverste niveau). Under hver vises dens delopgaver,
+  // opdelt i en afgrænset "Artikler"-liste (titel starter med "Artikel") og resten
+  // som almindelige delopgaver.
+  const avisParents = state.projects.filter(p=>p.type==='vaeresteds'&&!p.done&&!p.parentId);
 
-  if(!avisProjs.length) {
+  if(!avisParents.length) {
     el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Ingen avis-opgaver</div>';
     return;
   }
@@ -3807,22 +3811,34 @@ function renderDashboardAvis() {
   const weekEndStr = weekEnd.toISOString().split('T')[0];
   const type = getOpgaveType('vaeresteds');
 
-  // Group by underkategori
-  el.innerHTML = type.underkategorier.map(uk => {
-    const ukProjs = avisProjs.filter(p=>p.underkat===uk);
-    if(!ukProjs.length) return '';
-    return `<div style="margin-bottom:8px;">
-      <div style="font-size:10px;font-weight:600;color:${type.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${type.icon} ${uk}</div>
-      ${ukProjs.slice(0,3).map(p=>{
-        const isOverdue = p.deadline && p.deadline < today;
-        const isSoon = p.deadline && p.deadline <= weekEndStr;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
-          <span style="width:7px;height:7px;border-radius:50%;background:${p.color};flex-shrink:0;display:inline-block;"></span>
-          <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.title)}</span>
-          ${p.deadline?`<span style="font-size:9px;white-space:nowrap;color:${isOverdue?'var(--danger)':isSoon?'var(--warning)':'var(--text-muted)'};">⏰ ${formatDate(p.deadline)}</span>`:''}
-        </div>`;
-      }).join('')}
-      ${ukProjs.length>3?`<div style="font-size:9px;color:var(--text-muted);margin-top:2px;">+${ukProjs.length-3} mere</div>`:''}
+  const row = p => {
+    const isOverdue = p.deadline && p.deadline < today;
+    const isSoon = p.deadline && p.deadline <= weekEndStr;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <span style="width:7px;height:7px;border-radius:50%;background:${p.color};flex-shrink:0;display:inline-block;"></span>
+      <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.title)}</span>
+      ${p.deadline?`<span style="font-size:9px;white-space:nowrap;color:${isOverdue?'var(--danger)':isSoon?'var(--warning)':'var(--text-muted)'};">⏰ ${formatDate(p.deadline)}</span>`:''}
+    </div>`;
+  };
+
+  el.innerHTML = avisParents.map(avis => {
+    const kids = state.projects.filter(c=>c.parentId===avis.id&&!c.done);
+    const artikler = kids.filter(c=>isArtikelOpgave(c));
+    const andre = kids.filter(c=>!isArtikelOpgave(c));
+    const avisOverdue = avis.deadline && avis.deadline < today;
+    const avisSoon = avis.deadline && avis.deadline <= weekEndStr;
+
+    return `<div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:700;color:${type.color};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${type.icon} ${esc(avis.title)}</span>
+        ${avis.deadline?`<span style="font-size:9px;white-space:nowrap;color:${avisOverdue?'var(--danger)':avisSoon?'var(--warning)':'var(--text-muted)'};">⏰ ${formatDate(avis.deadline)}</span>`:''}
+      </div>
+      ${artikler.length ? `<div style="border:1px solid var(--border);border-radius:var(--radius);padding:2px 8px;margin-bottom:6px;">
+        <div style="font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Artikler</div>
+        ${artikler.map(row).join('')}
+      </div>` : ''}
+      ${andre.map(row).join('')}
+      ${!kids.length ? `<div style="font-size:10px;color:var(--text-muted);padding:2px 0 0;">Ingen delopgaver endnu</div>` : ''}
     </div>`;
   }).join('');
 }

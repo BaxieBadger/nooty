@@ -205,8 +205,8 @@
   .some-item-date{ font-size:clamp(10px,0.9vw,12px); color:var(--text-muted); flex:none; }
 
   /* ── OVERVIEW: SPOTIFY-KONTROLPANEL (vises kun når noget er aktivt) ── */
-  .wall-spotify-panel{ display:none; flex:0 0 20%; min-height:0; overflow:hidden; padding:clamp(14px,1.6vw,20px); border-bottom:1px solid var(--border); }
-  .wall-side.has-spotify .wall-spotify-panel{ display:flex; flex-direction:column; }
+  .wall-spotify-panel{ display:none; min-height:0; overflow:hidden; padding:clamp(14px,1.6vw,20px); }
+  .wall-side.has-spotify .wall-spotify-panel{ display:flex; flex-direction:column; flex:1; }
   .wsp-now{ display:flex; align-items:center; gap:10px; margin-top:8px; min-width:0; }
   .wsp-art{ width:44px; height:44px; border-radius:10px; object-fit:cover; flex:none; background:var(--surface2); }
   .wsp-info{ flex:1; min-width:0; }
@@ -239,6 +239,7 @@
   .wsp-vol-fill{ height:100%; width:0%; background:var(--accent2); border-radius:999px; }
 
   .wall-inbox{ flex:1; min-height:0; overflow-y:auto; padding:clamp(14px,1.6vw,20px); }
+  .wall-side.has-spotify .wall-inbox{ display:none; }
   .inbox-count-badge{ background:var(--accent); color:#fff; font-size:clamp(11px,1vw,13px); font-weight:700; padding:1px 8px; border-radius:999px; margin-left:6px; }
   .inbox-item{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
   .inbox-item:last-child{ border-bottom:none; }
@@ -1330,8 +1331,7 @@ async function spotifyPoll(){
   }
   const data = await spotifyApi('/me/player');
   if(!data || !data.item){
-    connectBtn.style.display = 'flex';
-    connectBtn.textContent = '🎵 Intet afspilles';
+    connectBtn.style.display = 'none';
     if(side) side.classList.remove('has-spotify');
     spStopProgressTicker();
     return;

@@ -1044,6 +1044,11 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
           <button class="view-toggle active" id="ad-tasks" onclick="setAgendaDetail('tasks',this)">Opgaver</button>
           <button class="view-toggle" id="ad-all" onclick="setAgendaDetail('all',this)">Opgaver + Delopgaver</button>
         </div>
+        <div style="display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;">
+          <button class="view-toggle active" data-cat-btn="opgaver" onclick="setCategoryFilter('opgaver')">Andre opgaver</button>
+          <button class="view-toggle" data-cat-btn="avis" onclick="setCategoryFilter('avis')">Værestedsavisen</button>
+          <button class="view-toggle" data-cat-btn="folkemode" onclick="setCategoryFilter('folkemode')">Folkemøde</button>
+        </div>
       </div>
 
       <!-- AGENDA VIEW -->
@@ -1097,6 +1102,10 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
           <button class="filter-pill active" onclick="setProjFilter('all',this)">Alle</button>
           <button class="filter-pill" onclick="setProjFilter('open',this)">Åbne</button>
           <button class="filter-pill" onclick="setProjFilter('high',this)">🔴 Høj prioritet</button>
+          <span style="width:1px;height:18px;background:var(--border);margin:0 2px;"></span>
+          <button class="filter-pill active" data-cat-btn="opgaver" onclick="setCategoryFilter('opgaver')">Andre opgaver</button>
+          <button class="filter-pill" data-cat-btn="avis" onclick="setCategoryFilter('avis')">Værestedsavisen</button>
+          <button class="filter-pill" data-cat-btn="folkemode" onclick="setCategoryFilter('folkemode')">Folkemøde</button>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
           <span style="font-size:11px;color:var(--text-muted);">Sortér:</span>
@@ -1833,6 +1842,20 @@ function getOpgaveType(id) { return OPGAVE_TYPES.find(t=>t.id===id) || OPGAVE_TY
 function getUnderkategorier(typeId) { return getOpgaveType(typeId).underkategorier; }
 // Er en opgave (parent eller delopgave) en Artikel under Værestedsavisen – styrer interview-panelet
 function isArtikelOpgave(p) { return p && p.type==='vaeresteds' && p.underkat==='Artikel'; }
+function isFolkemoedeOpgave(p) { return p && p.type==='aktivitet' && p.underkat==='Folkemøde'; }
+// Deler opgaver i tre gensidigt udelukkende buckets, ligesom toggle'et i wall.html.
+let categoryFilter = 'opgaver'; // 'opgaver' | 'avis' | 'folkemode'
+function matchesCategoryFilter(p) {
+  if(categoryFilter==='avis') return isArtikelOpgave(p);
+  if(categoryFilter==='folkemode') return isFolkemoedeOpgave(p);
+  return !isArtikelOpgave(p) && !isFolkemoedeOpgave(p);
+}
+function setCategoryFilter(f) {
+  categoryFilter = f;
+  document.querySelectorAll('[data-cat-btn]').forEach(b=>b.classList.toggle('active', b.dataset.catBtn===f));
+  renderAgenda();
+  renderProjects();
+}
 
 // ── STATE ──
 let state = {
@@ -2717,7 +2740,7 @@ function renderAgenda() {
   if(agendaDetail === 'tasks') {
     const projectEvents = [];
     const noDeadlineProjects = [];
-    state.projects.filter(p=>!p.done && !p.parentId).forEach(p => {
+    state.projects.filter(p=>!p.done && !p.parentId && matchesCategoryFilter(p)).forEach(p => {
       const childDates = state.projects.filter(c=>c.parentId===p.id&&!c.done&&c.deadline).map(c=>c.deadline).sort();
       const nearestDate = childDates[0] || p.deadline;
       if(!nearestDate) { noDeadlineProjects.push(p); return; }
@@ -2837,11 +2860,11 @@ function renderAgenda() {
   const dayBlocks = days.map(d => {
     const ds = d.toISOString().split('T')[0];
     const projectsThisDay = new Map();
-    state.projects.filter(p => !p.done && !p.parentId && p.deadline === ds).forEach(p => {
+    state.projects.filter(p => !p.done && !p.parentId && matchesCategoryFilter(p) && p.deadline === ds).forEach(p => {
       if(!projectsThisDay.has(p.id)) projectsThisDay.set(p.id, { proj:p, kids:[], showDeadline:true });
       else projectsThisDay.get(p.id).showDeadline = true;
     });
-    state.projects.filter(p => !p.done && !p.parentId).forEach(p => {
+    state.projects.filter(p => !p.done && !p.parentId && matchesCategoryFilter(p)).forEach(p => {
       state.projects.filter(c=>c.parentId===p.id&&!c.done&&c.deadline===ds).forEach(c => {
         if(!projectsThisDay.has(p.id)) projectsThisDay.set(p.id, { proj:p, kids:[], showDeadline: p.deadline === ds });
         projectsThisDay.get(p.id).kids.push(c);
@@ -3221,7 +3244,7 @@ function renderProjects() {
   // på Dashboard, indtil de er kategoriseret via "Planlæg →" – ellers dukker de
   // fejlagtigt op her som tomme "Andet"-opgaver (getOpgaveType falder tilbage
   // til sidste type i OPGAVE_TYPES når p.type er undefined).
-  let projects = state.projects.filter(p=>!p.parentId && p.type);
+  let projects = state.projects.filter(p=>!p.parentId && p.type && matchesCategoryFilter(p));
 
   if(projFilter==='open') projects=projects.filter(p=>!p.done);
   if(projFilter==='high') projects=projects.filter(p=>p.prio==='high'&&!p.done);

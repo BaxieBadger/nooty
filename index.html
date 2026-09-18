@@ -3795,37 +3795,26 @@ function renderDashboardAvis() {
     tryk.style.color = trykDate ? '#265E3A' : 'var(--text-muted)';
   }
 
-  // Ét avis-ad gangen-workflow: artikler og administrative opgaver er almindelige
-  // opgaver med type 'vaeresteds', ikke delopgaver under en avis-forælder. Samles
-  // her fladt, grupperet efter underkategori.
-  const avisProjs = state.projects.filter(p=>p.type==='vaeresteds'&&!p.done&&!p.parentId);
+  // Kun Artikler samles her — Administrativt/Andet under Værestedsavisen er
+  // almindelige opgaver og vises kun i den normale opgaveliste.
+  const artikler = state.projects.filter(p=>!p.done&&!p.parentId&&isArtikelOpgave(p));
 
-  if(!avisProjs.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Ingen avis-opgaver</div>';
+  if(!artikler.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Ingen artikler</div>';
     return;
   }
 
   const today = new Date().toISOString().split('T')[0];
   const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate()+7);
   const weekEndStr = weekEnd.toISOString().split('T')[0];
-  const type = getOpgaveType('vaeresteds');
 
-  // Group by underkategori
-  el.innerHTML = type.underkategorier.map(uk => {
-    const ukProjs = avisProjs.filter(p=>p.underkat===uk);
-    if(!ukProjs.length) return '';
-    return `<div style="margin-bottom:8px;">
-      <div style="font-size:10px;font-weight:600;color:${type.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${type.icon} ${uk}</div>
-      ${ukProjs.slice(0,3).map(p=>{
-        const isOverdue = p.deadline && p.deadline < today;
-        const isSoon = p.deadline && p.deadline <= weekEndStr;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
-          <span style="width:7px;height:7px;border-radius:50%;background:${p.color};flex-shrink:0;display:inline-block;"></span>
-          <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.title)}</span>
-          ${p.deadline?`<span style="font-size:9px;white-space:nowrap;color:${isOverdue?'var(--danger)':isSoon?'var(--warning)':'var(--text-muted)'};">⏰ ${formatDate(p.deadline)}</span>`:''}
-        </div>`;
-      }).join('')}
-      ${ukProjs.length>3?`<div style="font-size:9px;color:var(--text-muted);margin-top:2px;">+${ukProjs.length-3} mere</div>`:''}
+  el.innerHTML = artikler.map(p=>{
+    const isOverdue = p.deadline && p.deadline < today;
+    const isSoon = p.deadline && p.deadline <= weekEndStr;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <span style="width:7px;height:7px;border-radius:50%;background:${p.color};flex-shrink:0;display:inline-block;"></span>
+      <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.title)}</span>
+      ${p.deadline?`<span style="font-size:9px;white-space:nowrap;color:${isOverdue?'var(--danger)':isSoon?'var(--warning)':'var(--text-muted)'};">⏰ ${formatDate(p.deadline)}</span>`:''}
     </div>`;
   }).join('');
 }

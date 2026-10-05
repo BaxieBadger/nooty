@@ -1924,30 +1924,56 @@ async function sbSelect(table) {
   } catch(e) { return null; }
 }
 
-async function syncToSupabase() {
+// Sidst kendte version af hver række i Supabase (JSON-streng pr. nøgle). Bruges til kun
+// at sende rækker, der faktisk er ændret på denne enhed. Tidligere sendte hver save() ALLE
+// rækker, så en enhed med en forældet kopi (fx en åben fane på en anden computer)
+// overskrev ændringer fra andre enheder — fx at en opgave var markeret færdig.
+const sbSynced = { projects:{}, some_posts:{}, notes:{}, diary_entries:{} };
+function markSynced(table, key, obj) { sbSynced[table][String(key)] = JSON.stringify(obj); }
+
+async function sbUpsertMany(table, rows, opts = {}) {
+  if(!sbReady || !rows.length) return true;
+  try {
+    const r = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method:  'POST',
+      headers: sbHeaders(),
+      body:    JSON.stringify(rows),
+      keepalive: !!opts.keepalive,
+    });
+    if(!r.ok) { console.warn('Supabase write error:', table, r.status, await r.text().catch(()=>'')); return false; }
+    return true;
+  } catch(e) { console.warn('Supabase write error:', e); return false; }
+}
+
+async function syncToSupabase(opts = {}) {
   if(!sbReady) return;
-  // Projects
-  for(const p of state.projects) {
-    await sbUpsert('projects', { id: p.id, data: p });
-  }
-  // SoMe
-  for(const s of state.some) {
-    await sbUpsert('some_posts', { id: s.id, data: s });
-  }
-  // Notes
-  for(const n of state.notes) {
-    await sbUpsert('notes', { id: n.id, data: n });
-  }
-  // Diary
-  for(const [projId, entries] of Object.entries(state.diaryEntries)) {
-    await sbUpsert('diary_entries', { project_id: parseInt(projId), data: entries });
+  const pending = [];
+  const collect = (table, items, keyOf, rowOf) => {
+    const rows = [], keys = [];
+    for(const it of items) {
+      const key = String(keyOf(it));
+      const json = JSON.stringify(rowOf(it).data);
+      if(sbSynced[table][key] === json) continue;
+      rows.push(rowOf(it)); keys.push([key, json]);
+    }
+    if(rows.length) pending.push({ table, rows, keys });
+  };
+  collect('projects',   state.projects, p=>p.id, p=>({ id: p.id, data: p }));
+  collect('some_posts', state.some,     s=>s.id, s=>({ id: s.id, data: s }));
+  collect('notes',      state.notes,    n=>n.id, n=>({ id: n.id, data: n }));
+  collect('diary_entries', Object.entries(state.diaryEntries), ([pid])=>pid,
+          ([pid, entries])=>({ project_id: parseInt(pid), data: entries }));
+
+  for(const { table, rows, keys } of pending) {
+    // Tag snapshot før await, så ændringer foretaget under requesten sendes ved næste sync
+    if(await sbUpsertMany(table, rows, opts)) keys.forEach(([k, json])=>{ sbSynced[table][k] = json; });
   }
   // System state
-  await sbUpsert('system_state', { key: 'meta', value: {
+  await sbUpsertMany('system_state', [{ key: 'meta', value: {
     nextId:        state.nextId,
     kilder:        state.kilder || [],
     deletedIds:    state.deletedIds || [],
-  }});
+  }}], opts);
 }
 
 function parseSupabaseData(r) {
@@ -2080,6 +2106,7 @@ async function loadFromSupabase() {
         const sbIds = new Set(filteredParsed.map(p=>String(p.id)));
         const localOnly = state.projects.filter(p=>!sbIds.has(String(p.id)) && !deletedSet.has(String(p.id)));
         state.projects = [...filteredParsed, ...localOnly];
+        filteredParsed.forEach(p=>markSynced('projects', p.id, p));
         // Update nextId to avoid collisions
         const maxId = Math.max(...state.projects.map(p=>Number(p.id)||0), state.nextId, 1);
         if(maxId >= state.nextId) state.nextId = maxId + 1;
@@ -2088,16 +2115,16 @@ async function loadFromSupabase() {
     }
     if(some?.length) {
       const parsed = some.map(r=>parseSupabaseData(r)).filter(Boolean);
-      if(parsed.length) state.some = parsed;
+      if(parsed.length) { state.some = parsed; parsed.forEach(x=>markSynced('some_posts', x.id, x)); }
     }
     if(notes?.length) {
       const parsed = notes.map(r=>parseSupabaseData(r)).filter(Boolean);
-      if(parsed.length) state.notes = parsed;
+      if(parsed.length) { state.notes = parsed; parsed.forEach(x=>markSynced('notes', x.id, x)); }
     }
     if(diary?.length) {
       diary.forEach(r=>{
         const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
-        if(d) state.diaryEntries[r.project_id] = d;
+        if(d) { state.diaryEntries[r.project_id] = d; markSynced('diary_entries', r.project_id, d); }
       });
     }
     if(sys?.length) {
@@ -2137,10 +2164,28 @@ function hideSyncIndicator() {
 
 // Debounced sync – waits 2 seconds after last save before syncing
 let syncTimer = null;
+let syncPromise = Promise.resolve();
 function scheduleSyncToSupabase() {
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(()=>{ syncToSupabase(); }, 2000);
+  syncTimer = setTimeout(()=>{ syncTimer = null; syncPromise = syncToSupabase(); }, 2000);
 }
+// Send ventende ændringer med det samme, når fanen skjules/lukkes, så de ikke går tabt
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden' && syncTimer) {
+    clearTimeout(syncTimer); syncTimer = null;
+    syncPromise = syncToSupabase({ keepalive: true });
+  } else if(document.visibilityState === 'visible' && sbReady && !syncTimer) {
+    // Hent ændringer fra andre enheder (fx væg-skærmen), når fanen bliver aktiv igen —
+    // men først når egne ændringer er sendt, så de ikke overskrives af den gamle server-version
+    syncPromise.then(async ()=>{
+      if(syncTimer) return;
+      if(await loadFromSupabase()) {
+        localStorage.setItem('focusbase_v2', JSON.stringify(state));
+        renderProjects(); renderDashboard(); updateBadge();
+      }
+    });
+  }
+});
 
 // ── SAVE / LOAD ──
 function save() {

@@ -623,6 +623,40 @@ select { cursor:pointer; }
   font-size:22px; color:var(--border2);
 }
 
+/* ── SOME VÆKST (følgertal) ── */
+.vaekst-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.vaekst-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; align-items:start; }
+@media (max-width:1000px) { .vaekst-grid { grid-template-columns:1fr; } }
+.vaekst-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow); }
+.vaekst-card-head { padding:10px 16px; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.vaekst-card-body { padding:14px 16px; }
+.vaekst-now { font-size:28px; font-weight:700; color:var(--text); line-height:1.1; }
+.vaekst-now-lbl { font-size:10px; color:var(--text-muted); margin-bottom:10px; }
+.vaekst-delta { display:flex; justify-content:space-between; gap:8px; font-size:11px; color:var(--text-muted); padding:3px 0; }
+.vaekst-delta b { color:var(--text); font-weight:600; white-space:nowrap; }
+.vaekst-delta b.up { color:var(--success); }
+.vaekst-delta b.down { color:var(--danger); }
+.vaekst-goal { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:11px; color:var(--text-muted); }
+.vaekst-goal-bar { height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; margin:6px 0; }
+.vaekst-goal-bar > div { height:100%; border-radius:3px; }
+.vaekst-badge { font-size:9px; font-weight:700; padding:2px 7px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; }
+.vaekst-badge.ok { background:var(--accent2-light); color:var(--success); }
+.vaekst-badge.behind { background:var(--danger-light); color:var(--danger); }
+.vaekst-badge.done { background:var(--accent2-light); color:var(--success); }
+.vaekst-chart { width:100%; height:150px; display:block; margin-top:12px; }
+.vaekst-history { margin-top:18px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px; overflow-x:auto; }
+.vaekst-table { width:100%; border-collapse:collapse; font-size:12px; }
+.vaekst-table th { text-align:right; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; padding:4px 8px; border-bottom:1px solid var(--border); }
+.vaekst-table td { text-align:right; padding:6px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.vaekst-table th:first-child, .vaekst-table td:first-child { text-align:left; }
+.vaekst-table tr:last-child td { border-bottom:none; }
+.vaekst-notice { background:var(--warning-light); border:1px solid var(--warning); border-radius:var(--radius); padding:10px 14px; font-size:12px; line-height:1.5; margin-bottom:14px; }
+.fl-grid { display:grid; grid-template-columns:auto repeat(3,minmax(0,1fr)); gap:8px 10px; align-items:center; margin-bottom:12px; }
+.fl-grid .fl-head { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+.fl-grid .fl-org { font-size:12px; font-weight:600; }
+.fl-grid input { width:100%; }
+.fl-hint { font-size:10px; color:var(--text-muted); margin-top:2px; min-height:13px; }
+
 /* ── SOME CARD ── */
 .some-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow); }
 .some-card-header { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
@@ -1016,6 +1050,7 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
                   <div style="font-size:9px;color:var(--text-muted);">Afventer</div>
                 </div>
               </div>
+              <div id="some-follower-reminder"></div>
             </div>
             <div style="flex:1;min-width:180px;">
               <div class="s-label" style="margin:0 0 8px;">Næste – Sport for Livet</div>
@@ -1150,6 +1185,7 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
         <div style="display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;">
           <button class="view-toggle active" id="svt-cal"    onclick="setSomeView('cal',this)">📅 Kalender</button>
           <button class="view-toggle"        id="svt-kanban" onclick="setSomeView('kanban',this)">◫ Kanban</button>
+          <button class="view-toggle"        id="svt-vaekst" onclick="setSomeView('vaekst',this)">📈 Vækst</button>
         </div>
         <!-- Cal month nav (only in cal view) -->
         <div id="some-cal-nav" style="display:flex;align-items:center;gap:6px;">
@@ -1169,6 +1205,26 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
       <!-- KANBAN VIEW -->
       <div id="some-view-kanban" style="display:none;">
         <div class="some-kanban" id="some-kanban"></div>
+      </div>
+
+      <!-- VÆKST VIEW: følgerudvikling pr. profil -->
+      <div id="some-view-vaekst" style="display:none;">
+        <div class="vaekst-toolbar">
+          <div style="display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;">
+            <button type="button" class="view-toggle active" id="vk-org-sport" onclick="setVaekstOrg('sport')">Sport for Livet</button>
+            <button type="button" class="view-toggle" id="vk-org-lvs" onclick="setVaekstOrg('lvs')">LVS</button>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn secondary sm" onclick="openFollowerGoalsModal()">🎯 Mål</button>
+            <button class="btn sm" onclick="openFollowerSnapshotModal()">📊 Registrér følgere</button>
+          </div>
+        </div>
+        <div id="vaekst-notice"></div>
+        <div class="vaekst-grid" id="vaekst-cards"></div>
+        <div class="vaekst-history">
+          <div class="s-label" style="margin:0 0 8px;">Registreringer</div>
+          <div id="vaekst-history"></div>
+        </div>
       </div>
     </div>
 
@@ -1639,6 +1695,50 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
   </div>
 </div>
 
+<!-- SOME: REGISTRÉR FØLGERE MODAL -->
+<div class="modal-overlay" id="modal-followers">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div class="modal-title">📊 Registrér følgere</div>
+      <button class="modal-close" onclick="closeModal('modal-followers')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field" style="max-width:200px;">
+        <label>Dato</label>
+        <input type="date" id="fl-dato" style="width:100%;" onchange="renderFollowerSnapshotFields()">
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:-4px 0 12px;line-height:1.5;">
+        Skriv følgertallet, som det står på profilen. Felter, du lader stå tomme, springes over.
+      </div>
+      <div id="fl-fields"></div>
+      <div class="flex gap8" style="margin-top:6px;">
+        <button class="btn" onclick="saveFollowerSnapshot()" style="flex:1;">Gem følgertal</button>
+        <button class="btn secondary" onclick="closeModal('modal-followers')">Annuller</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SOME: FØLGERMÅL MODAL -->
+<div class="modal-overlay" id="modal-follower-goals">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">🎯 Følgermål</div>
+      <button class="modal-close" onclick="closeModal('modal-follower-goals')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px;color:var(--text-muted);margin:0 0 12px;line-height:1.5;">
+        Sæt et mål for antal følgere og en dato pr. profil. Tomt mål = intet mål.
+      </div>
+      <div id="fg-fields"></div>
+      <div class="flex gap8" style="margin-top:6px;">
+        <button class="btn" onclick="saveFollowerGoals()" style="flex:1;">Gem mål</button>
+        <button class="btn secondary" onclick="closeModal('modal-follower-goals')">Annuller</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- AFSLUT SOME-OPSLAG MODAL -->
 <div class="modal-overlay" id="modal-some-stats">
   <div class="modal" style="width:480px;">
@@ -1861,6 +1961,7 @@ function setCategoryFilter(f) {
 let state = {
   projects: [],
   some: [],
+  someFollowers: [], // SoMe-vækst: {id, kind:'snapshot'|'goal', ...} – se supabase/some_followers.sql
   notes: [],
   diaryEntries: {},
   nextId: 1,
@@ -1928,7 +2029,10 @@ async function sbSelect(table) {
 // at sende rækker, der faktisk er ændret på denne enhed. Tidligere sendte hver save() ALLE
 // rækker, så en enhed med en forældet kopi (fx en åben fane på en anden computer)
 // overskrev ændringer fra andre enheder — fx at en opgave var markeret færdig.
-const sbSynced = { projects:{}, some_posts:{}, notes:{}, diary_entries:{} };
+const sbSynced = { projects:{}, some_posts:{}, some_followers:{}, notes:{}, diary_entries:{} };
+// Sættes hvis tabellen some_followers ikke kan hentes fra Supabase (fx fordi SQL'en ikke er
+// kørt endnu). Så gemmes følgertal kun lokalt, og Vækst-fanen viser en vejledning.
+let sbFollowersMissing = false;
 function markSynced(table, key, obj) { sbSynced[table][String(key)] = JSON.stringify(obj); }
 
 async function sbUpsertMany(table, rows, opts = {}) {
@@ -1960,6 +2064,7 @@ async function syncToSupabase(opts = {}) {
   };
   collect('projects',   state.projects, p=>p.id, p=>({ id: p.id, data: p }));
   collect('some_posts', state.some,     s=>s.id, s=>({ id: s.id, data: s }));
+  if(!sbFollowersMissing) collect('some_followers', state.someFollowers||[], f=>f.id, f=>({ id: f.id, data: f }));
   collect('notes',      state.notes,    n=>n.id, n=>({ id: n.id, data: n }));
   collect('diary_entries', Object.entries(state.diaryEntries), ([pid])=>pid,
           ([pid, entries])=>({ project_id: parseInt(pid), data: entries }));
@@ -2086,12 +2191,13 @@ async function loadFromSupabase() {
   if(!sbReady) return false;
   try {
     showSyncIndicator('Henter data fra sky...');
-    const [projects, some, notes, diary, sys] = await Promise.all([
+    const [projects, some, notes, diary, sys, followers] = await Promise.all([
       sbSelect('projects'),
       sbSelect('some_posts'),
       sbSelect('notes'),
       sbSelect('diary_entries'),
       sbSelect('system_state'),
+      sbSelect('some_followers'),
     ]);
 
     if(projects) {
@@ -2135,6 +2241,23 @@ async function loadFromSupabase() {
         if(m.kilder?.length)     state.kilder     = m.kilder;
         if(m.deletedIds?.length) state.deletedIds = m.deletedIds;
       }
+    }
+    // SoMe-følgertal (efter system_state, så deletedIds fra serveren er med): server-rækker +
+    // lokale rækker, der endnu ikke er nået op (fx gemt mens tabellen manglede). Slettede id'er
+    // filtreres fra, så en gammel lokal kopi på en anden enhed ikke genopliver dem.
+    sbFollowersMissing = followers === null;
+    if(followers) {
+      const deletedSet = new Set((state.deletedIds||[]).map(String));
+      const parsed = followers.map(r=>{
+        try {
+          const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+          return d && typeof d === 'object' ? { ...d, id: r.id } : null;
+        } catch(e) { return null; }
+      }).filter(f=>f && !deletedSet.has(String(f.id)));
+      const sbIds = new Set(parsed.map(f=>String(f.id)));
+      const localOnly = (state.someFollowers||[]).filter(f=>!sbIds.has(String(f.id)) && !deletedSet.has(String(f.id)));
+      state.someFollowers = [...parsed, ...localOnly];
+      parsed.forEach(f=>markSynced('some_followers', f.id, f));
     }
     hideSyncIndicator();
     return true;
@@ -4692,6 +4815,7 @@ function setSomeView(v, el) {
   el.classList.add('active');
   document.getElementById('some-view-cal').style.display    = v==='cal'    ? 'block' : 'none';
   document.getElementById('some-view-kanban').style.display = v==='kanban' ? 'block' : 'none';
+  document.getElementById('some-view-vaekst').style.display = v==='vaekst' ? 'block' : 'none';
   document.getElementById('some-cal-nav').style.display     = v==='cal'    ? 'flex'  : 'none';
   renderSome();
 }
@@ -4703,8 +4827,337 @@ const SOME_CHECKS=['Tags tilføjet?','Links virker?','Korrekturlæst?','Billede/
 
 function renderSome() {
   if(someView==='cal') renderSomeCal();
+  else if(someView==='vaekst') renderVaekst();
   else renderSomeKanban();
 }
+
+// ── SOME VÆKST: følgertal pr. profil (org-enhed × platform) ──
+// Gemmes i state.someFollowers / Supabase-tabellen some_followers som to slags rækker:
+//   { kind:'snapshot', dato:'YYYY-MM-DD', orgEnhed, platform, foelgere }
+//   { kind:'goal',     orgEnhed, platform, maal, deadline:'YYYY-MM-DD'|'' , updatedAt }
+const VAEKST_PLATFORMS = ['Facebook','Instagram','LinkedIn'];
+const VAEKST_ORGS = [{ id:'sport', navn:'Sport for Livet' }, { id:'lvs', navn:'LVS' }];
+const VAEKST_REMINDER_DAYS = 30;
+let vaekstOrg = 'sport';
+
+const fmtNum = n => Number(n||0).toLocaleString('da-DK');
+const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const daysBetween = (a,b) => Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00')) / 86400000);
+
+function followerSnapshots(org, plat) {
+  return (state.someFollowers||[])
+    .filter(f=>f.kind==='snapshot' && f.orgEnhed===org && f.platform===plat && f.dato)
+    .sort((a,b)=>a.dato.localeCompare(b.dato));
+}
+function followerGoal(org, plat) {
+  return (state.someFollowers||[])
+    .filter(f=>f.kind==='goal' && f.orgEnhed===org && f.platform===plat)
+    .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''))[0] || null;
+}
+function lastFollowerDate() {
+  return (state.someFollowers||[]).filter(f=>f.kind==='snapshot' && f.dato)
+    .map(f=>f.dato).sort().pop() || null;
+}
+function removeFollowerEntry(id) {
+  state.someFollowers = (state.someFollowers||[]).filter(f=>f.id!==id);
+  if(!state.deletedIds) state.deletedIds = [];
+  if(!state.deletedIds.includes(String(id))) state.deletedIds.push(String(id));
+  delete sbSynced.some_followers[String(id)];
+  if(sbReady && !sbFollowersMissing) fetch(`${SUPABASE_URL}/rest/v1/some_followers?id=eq.${id}`, { method:'DELETE', headers:sbHeaders() }).catch(e=>console.warn(e));
+}
+
+function setVaekstOrg(org) {
+  vaekstOrg = org;
+  VAEKST_ORGS.forEach(o=>document.getElementById('vk-org-'+o.id)?.classList.toggle('active', o.id===org));
+  renderVaekst();
+}
+
+// Tempo pr. måned: ændring over (op til) de seneste 90 dage, ellers siden første registrering.
+function followerMonthlyRate(snaps) {
+  if(snaps.length < 2) return null;
+  const last = snaps[snaps.length-1];
+  const ref = snaps.find(s=>daysBetween(s.dato, last.dato) <= 90 && s !== last) || snaps[0];
+  const days = daysBetween(ref.dato, last.dato);
+  if(days <= 0) return null;
+  return (last.foelgere - ref.foelgere) / days * 30.44;
+}
+
+function deltaHtml(label, from, to) {
+  if(!from) return '';
+  const diff = to.foelgere - from.foelgere;
+  const pct = from.foelgere ? (diff / from.foelgere * 100) : 0;
+  const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : '';
+  const sign = diff > 0 ? '+' : '';
+  return `<div class="vaekst-delta"><span>${label} (${formatDate(from.dato)})</span><b class="${cls}">${sign}${fmtNum(diff)} (${sign}${pct.toLocaleString('da-DK',{maximumFractionDigits:1})}%)</b></div>`;
+}
+
+function renderVaekst() {
+  const cardsEl = document.getElementById('vaekst-cards');
+  if(!cardsEl) return;
+  const notice = document.getElementById('vaekst-notice');
+  notice.innerHTML = (sbReady && sbFollowersMissing)
+    ? `<div class="vaekst-notice"><b>Følgertal gemmes kun på denne enhed.</b> Tabellen <code>some_followers</code> kunne ikke hentes fra Supabase. Kør <code>supabase/some_followers.sql</code> i Supabase (SQL Editor → Run) og genindlæs siden, så synkroniseres tallene.</div>`
+    : '';
+
+  const today = todayISO();
+  cardsEl.innerHTML = VAEKST_PLATFORMS.map(plat => {
+    const pc = platColor(plat);
+    const snaps = followerSnapshots(vaekstOrg, plat);
+    const goal = followerGoal(vaekstOrg, plat);
+    const last = snaps[snaps.length-1];
+    const prev = snaps[snaps.length-2];
+    const first = snaps[0];
+    const rate = followerMonthlyRate(snaps);
+
+    let body;
+    if(!last) {
+      body = `<div class="vaekst-now">—</div><div class="vaekst-now-lbl">Ingen registreringer endnu</div>`;
+    } else {
+      body = `<div class="vaekst-now">${fmtNum(last.foelgere)}</div>
+        <div class="vaekst-now-lbl">følgere pr. ${formatDate(last.dato)} ${last.dato.slice(0,4)}</div>
+        ${deltaHtml('Siden forrige', prev, last)}
+        ${snaps.length > 2 ? deltaHtml('Siden start', first, last) : ''}
+        ${rate !== null ? `<div class="vaekst-delta"><span>Tempo</span><b>${rate>=0?'+':''}${fmtNum(Math.round(rate))} pr. md.</b></div>` : ''}`;
+    }
+
+    let goalHtml = '';
+    if(goal && goal.maal) {
+      const cur = last ? last.foelgere : 0;
+      const pct = Math.max(0, Math.min(100, cur / goal.maal * 100));
+      const missing = goal.maal - cur;
+      let status = '', detail = '';
+      if(missing <= 0) {
+        status = `<span class="vaekst-badge done">Nået 🎉</span>`;
+      } else if(goal.deadline && goal.deadline > today) {
+        const months = daysBetween(today, goal.deadline) / 30.44;
+        const needed = missing / Math.max(months, 0.1);
+        detail = `Kræver ca. +${fmtNum(Math.ceil(needed))} pr. md.`;
+        if(rate !== null) status = rate >= needed
+          ? `<span class="vaekst-badge ok">På sporet</span>`
+          : `<span class="vaekst-badge behind">Bagud</span>`;
+      } else if(goal.deadline) {
+        status = `<span class="vaekst-badge behind">Frist overskredet</span>`;
+      }
+      goalHtml = `<div class="vaekst-goal">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <span>🎯 Mål: <b style="color:var(--text);">${fmtNum(goal.maal)}</b>${goal.deadline?` inden ${formatDate(goal.deadline)} ${goal.deadline.slice(0,4)}`:''}</span>${status}
+        </div>
+        <div class="vaekst-goal-bar"><div style="width:${pct}%;background:${pc.bg};"></div></div>
+        <div style="display:flex;justify-content:space-between;gap:6px;">
+          <span>${Math.round(pct)}%${missing>0?` · mangler ${fmtNum(missing)}`:''}</span><span>${detail}</span>
+        </div>
+      </div>`;
+    }
+
+    return `<div class="vaekst-card">
+      <div class="vaekst-card-head" style="background:${pc.bg};">${plat}</div>
+      <div class="vaekst-card-body">
+        ${body}
+        <canvas class="vaekst-chart" id="vaekst-chart-${plat}"></canvas>
+        ${goalHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  VAEKST_PLATFORMS.forEach(plat => drawFollowerChart(`vaekst-chart-${plat}`, followerSnapshots(vaekstOrg, plat), followerGoal(vaekstOrg, plat), platColor(plat).bg));
+  renderVaekstHistory();
+}
+
+function drawFollowerChart(canvasId, snaps, goal, color) {
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const cs = getComputedStyle(document.documentElement);
+  const muted  = cs.getPropertyValue('--text-muted').trim() || '#888';
+  const border = cs.getPropertyValue('--border').trim() || '#ddd';
+  const font   = cs.getPropertyValue('--font').trim() || 'sans-serif';
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth || 300, H = canvas.clientHeight || 150;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  ctx.font = `10px ${font}`;
+
+  if(!snaps.length) {
+    ctx.fillStyle = muted; ctx.textAlign = 'center';
+    ctx.fillText('Ingen data endnu', W/2, H/2);
+    return;
+  }
+
+  const hasGoal = goal && goal.maal;
+  const t = d => new Date(d+'T12:00:00').getTime();
+  const last = snaps[snaps.length-1];
+  let tMin = t(snaps[0].dato), tMax = t(last.dato);
+  if(hasGoal && goal.deadline && t(goal.deadline) > tMax) tMax = t(goal.deadline);
+  if(tMax === tMin) { tMin -= 15*86400000; tMax += 15*86400000; }
+  const vals = snaps.map(s=>s.foelgere).concat(hasGoal ? [goal.maal] : []);
+  let vMin = Math.min(...vals), vMax = Math.max(...vals);
+  const pad = Math.max((vMax - vMin) * 0.12, vMax * 0.02, 5);
+  vMin = Math.max(0, vMin - pad); vMax = vMax + pad;
+
+  const L = 44, R = 8, T = 8, B = 18;
+  const x = tv => L + (tv - tMin) / (tMax - tMin) * (W - L - R);
+  const y = v  => T + (1 - (v - vMin) / (vMax - vMin)) * (H - T - B);
+
+  // Gitter + y-labels
+  ctx.strokeStyle = border; ctx.lineWidth = 1; ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let i=0;i<=3;i++) {
+    const v = vMin + (vMax - vMin) * i / 3, yy = Math.round(y(v)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(W - R, yy); ctx.stroke();
+    ctx.fillText(fmtNum(Math.round(v)), L - 6, yy);
+  }
+  // X-labels: første og sidste dato på aksen
+  ctx.textBaseline = 'alphabetic';
+  const xLabel = tv => { const d = new Date(tv); return `${d.getDate()}. ${DA_MONTHS_SHORT[d.getMonth()]}${d.getFullYear()!==new Date().getFullYear()?' '+String(d.getFullYear()).slice(2):''}`; };
+  ctx.textAlign = 'left';  ctx.fillText(xLabel(tMin), L, H - 4);
+  ctx.textAlign = 'right'; ctx.fillText(xLabel(tMax), W - R, H - 4);
+
+  // Mål: stiplet linje fra seneste måling til målet ved fristen (eller vandret hvis ingen frist)
+  if(hasGoal) {
+    ctx.save();
+    ctx.setLineDash([4,4]); ctx.strokeStyle = color; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if(goal.deadline && t(goal.deadline) > t(last.dato)) {
+      ctx.moveTo(x(t(last.dato)), y(last.foelgere)); ctx.lineTo(x(t(goal.deadline)), y(goal.maal));
+    } else {
+      ctx.moveTo(L, y(goal.maal)); ctx.lineTo(W - R, y(goal.maal));
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Følgerkurve
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  snaps.forEach((s,i)=>{ const px=x(t(s.dato)), py=y(s.foelgere); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+  ctx.stroke();
+  ctx.fillStyle = color;
+  snaps.forEach(s=>{ ctx.beginPath(); ctx.arc(x(t(s.dato)), y(s.foelgere), snaps.length>24?2:3, 0, Math.PI*2); ctx.fill(); });
+}
+
+function renderVaekstHistory() {
+  const el = document.getElementById('vaekst-history');
+  if(!el) return;
+  const rows = {};
+  (state.someFollowers||[]).filter(f=>f.kind==='snapshot' && f.orgEnhed===vaekstOrg && f.dato)
+    .forEach(f=>{ (rows[f.dato] = rows[f.dato] || {})[f.platform] = f.foelgere; });
+  const dates = Object.keys(rows).sort().reverse();
+  if(!dates.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text-muted);">Ingen registreringer for ${VAEKST_ORGS.find(o=>o.id===vaekstOrg).navn} endnu. Klik på <b>📊 Registrér følgere</b> for at sætte et nulpunkt.</div>`;
+    return;
+  }
+  el.innerHTML = `<table class="vaekst-table">
+    <thead><tr><th>Dato</th>${VAEKST_PLATFORMS.map(p=>`<th>${p}</th>`).join('')}<th></th></tr></thead>
+    <tbody>${dates.map(d=>`<tr>
+      <td>${formatDate(d)} ${d.slice(0,4)}</td>
+      ${VAEKST_PLATFORMS.map(p=>`<td>${rows[d][p]!==undefined?fmtNum(rows[d][p]):'<span style="color:var(--text-dim);">–</span>'}</td>`).join('')}
+      <td><button class="btn secondary sm" style="font-size:10px;padding:2px 8px;" onclick="openFollowerSnapshotModal('${d}')">Rediger</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function openFollowerSnapshotModal(dato) {
+  document.getElementById('fl-dato').value = dato || todayISO();
+  renderFollowerSnapshotFields();
+  document.getElementById('modal-followers').classList.add('open');
+}
+
+// Felterne viser den eksisterende værdi for den valgte dato (så man kan rette), og
+// sidste kendte tal før datoen som hjælpetekst.
+function renderFollowerSnapshotFields() {
+  const dato = document.getElementById('fl-dato').value;
+  const el = document.getElementById('fl-fields');
+  el.innerHTML = `<div class="fl-grid">
+    <div></div>${VAEKST_PLATFORMS.map(p=>`<div class="fl-head" style="color:${platColor(p).bg};">${p}</div>`).join('')}
+    ${VAEKST_ORGS.map(o=>`<div class="fl-org">${o.navn}</div>${VAEKST_PLATFORMS.map(p=>{
+      const snaps = followerSnapshots(o.id, p);
+      const existing = snaps.find(s=>s.dato===dato);
+      const before = snaps.filter(s=>s.dato < dato).pop();
+      return `<div>
+        <input type="number" min="0" step="1" inputmode="numeric" id="fl-${o.id}-${p}" value="${existing?existing.foelgere:''}" placeholder="${before?fmtNum(before.foelgere):'Antal'}">
+        <div class="fl-hint">${before?`Sidst: ${formatDate(before.dato)}`:''}</div>
+      </div>`;
+    }).join('')}`).join('')}
+  </div>`;
+}
+
+function saveFollowerSnapshot() {
+  const dato = document.getElementById('fl-dato').value;
+  if(!dato) { alert('Vælg en dato'); return; }
+  if(dato > todayISO()) { alert('Datoen kan ikke ligge i fremtiden'); return; }
+  let saved = 0, removed = 0;
+  for(const o of VAEKST_ORGS) for(const p of VAEKST_PLATFORMS) {
+    const raw = document.getElementById(`fl-${o.id}-${p}`).value.trim();
+    const existing = followerSnapshots(o.id, p).find(s=>s.dato===dato);
+    if(raw === '') {
+      if(existing) { removeFollowerEntry(existing.id); removed++; }
+      continue;
+    }
+    const n = parseInt(raw, 10);
+    if(isNaN(n) || n < 0) { alert(`Ugyldigt tal for ${o.navn} · ${p}`); return; }
+    if(existing) existing.foelgere = n;
+    else state.someFollowers.push({ id:newId(), kind:'snapshot', dato, orgEnhed:o.id, platform:p, foelgere:n, createdAt:new Date().toISOString() });
+    saved++;
+  }
+  if(!saved && !removed) { alert('Skriv mindst ét følgertal'); return; }
+  save(); closeModal('modal-followers'); renderSome(); renderSomeUpcoming();
+  toast(saved ? `📊 ${saved} følgertal gemt ✓` : '📊 Registrering fjernet');
+}
+
+function openFollowerGoalsModal() {
+  const el = document.getElementById('fg-fields');
+  el.innerHTML = VAEKST_ORGS.map(o=>`
+    <div class="s-label" style="margin:4px 0 8px;">${o.navn}</div>
+    ${VAEKST_PLATFORMS.map(p=>{
+      const g = followerGoal(o.id, p);
+      const last = followerSnapshots(o.id, p).pop();
+      return `<div class="row3" style="align-items:end;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:600;color:${platColor(p).bg};padding-bottom:9px;">${p}${last?` <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(nu ${fmtNum(last.foelgere)})</span>`:''}</div>
+        <div class="field" style="margin:0;"><label>Mål (følgere)</label><input type="number" min="0" step="1" id="fg-${o.id}-${p}-maal" value="${g?.maal||''}"></div>
+        <div class="field" style="margin:0;"><label>Inden</label><input type="date" id="fg-${o.id}-${p}-deadline" value="${g?.deadline||''}" style="width:100%;"></div>
+      </div>`;
+    }).join('')}`).join('');
+  document.getElementById('modal-follower-goals').classList.add('open');
+}
+
+function saveFollowerGoals() {
+  for(const o of VAEKST_ORGS) for(const p of VAEKST_PLATFORMS) {
+    const raw = document.getElementById(`fg-${o.id}-${p}-maal`).value.trim();
+    const deadline = document.getElementById(`fg-${o.id}-${p}-deadline`).value;
+    const g = followerGoal(o.id, p);
+    if(raw === '') { if(g) removeFollowerEntry(g.id); continue; }
+    const maal = parseInt(raw, 10);
+    if(isNaN(maal) || maal <= 0) { alert(`Ugyldigt mål for ${o.navn} · ${p}`); return; }
+    if(g) { if(g.maal!==maal || g.deadline!==deadline) { g.maal = maal; g.deadline = deadline; g.updatedAt = new Date().toISOString(); } }
+    else state.someFollowers.push({ id:newId(), kind:'goal', orgEnhed:o.id, platform:p, maal, deadline, updatedAt:new Date().toISOString() });
+  }
+  save(); closeModal('modal-follower-goals'); renderSome();
+  toast('🎯 Mål gemt ✓');
+}
+
+// Dashboard: påmindelse når følgertal ikke er registreret i VAEKST_REMINDER_DAYS dage
+function renderFollowerReminder() {
+  const el = document.getElementById('some-follower-reminder');
+  if(!el) return;
+  const last = lastFollowerDate();
+  const days = last ? daysBetween(last, todayISO()) : null;
+  if(last && days < VAEKST_REMINDER_DAYS) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div onclick="event.stopPropagation();goToVaekst(true);" style="margin-top:8px;padding:6px 8px;border-radius:var(--radius-sm);background:var(--warning-light);color:var(--text);font-size:10px;line-height:1.4;cursor:pointer;" title="Registrér følgertal">
+    📊 ${last ? `Følgertal ikke registreret i ${days} dage` : 'Registrér første følgertal'} →
+  </div>`;
+}
+function goToVaekst(openModal) {
+  nav('some');
+  setSomeView('vaekst', document.getElementById('svt-vaekst'));
+  if(openModal) openFollowerSnapshotModal();
+}
+
+let _vaekstResizeTimer = null;
+window.addEventListener('resize', () => {
+  if(someView !== 'vaekst') return;
+  clearTimeout(_vaekstResizeTimer);
+  _vaekstResizeTimer = setTimeout(renderVaekst, 150);
+});
 
 // Dashboard-kortets "Næste 3 opslag" pr. org-enhed, sorteret efter Post-dato
 function renderSomeUpcoming() {
@@ -4726,6 +5179,7 @@ function renderSomeUpcoming() {
   };
   renderCol('sport', 'some-upcoming-sport');
   renderCol('lvs', 'some-upcoming-lvs');
+  renderFollowerReminder();
 }
 
 function renderSomeCal() {
@@ -5313,12 +5767,13 @@ async function exportBackup() {
   const statusEl = document.getElementById('sb-status');
   if(statusEl) statusEl.textContent = '⏳ Henter data til backup...';
   try {
-    const [projects, some, notes, diary, sys] = await Promise.all([
+    const [projects, some, notes, diary, sys, followers] = await Promise.all([
       sbSelect('projects'),
       sbSelect('some_posts'),
       sbSelect('notes'),
       sbSelect('diary_entries'),
       sbSelect('system_state'),
+      sbSelect('some_followers'),
     ]);
     if(projects === null) throw new Error('kunne ikke hente opgaver fra Supabase');
     const backup = {
@@ -5330,6 +5785,7 @@ async function exportBackup() {
         notes:         notes    || [],
         diary_entries: diary    || [],
         system_state:  sys      || [],
+        some_followers: followers || [],
       }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });

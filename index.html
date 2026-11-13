@@ -152,7 +152,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .topbar { display:none !important; }
 
 /* ── FAB SPEED-DIAL (Pomodoro / Pomodoro+ / Ny opgave) ── */
-.fab-wrap { position:fixed; bottom:24px; right:24px; z-index:400; display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+/* Wrapperen fylder lige så meget som de skjulte menupunkter, så den må ikke selv fange klik –
+   kun knapperne gør (fab-main altid, fab-option kun når menuen er åben). */
+.fab-wrap { position:fixed; bottom:24px; right:24px; z-index:400; display:flex; flex-direction:column; align-items:flex-end; gap:10px; pointer-events:none; }
 .fab-option {
   display:flex; align-items:center; gap:8px;
   background:var(--surface); color:var(--text); border:1px solid var(--border);
@@ -170,6 +172,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
   background:var(--accent); color:#fff; font-size:22px;
   display:flex; align-items:center; justify-content:center;
   cursor:pointer; box-shadow:var(--shadow-md); transition:transform 0.2s ease, background 0.2s ease;
+  pointer-events:auto;
 }
 .fab-main:hover { background:var(--accent2); }
 .fab-wrap.open .fab-main { transform:rotate(45deg); }

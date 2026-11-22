@@ -1920,6 +1920,7 @@ hr.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
 
 <div class="toasts" id="toasts"></div>
 
+<script src="js/voice.js"></script>
 <script>
 // ── OPGAVE-HIERARKI ──
 // Top-niveau (tidl. "Projekter"/Temaer) → 5 faste Opgave-typer.
@@ -2242,7 +2243,13 @@ async function loadFromSupabase() {
         const m = typeof meta === 'string' ? JSON.parse(meta) : meta;
         state.nextId        = m.nextId        || state.nextId;
         if(m.kilder?.length)     state.kilder     = m.kilder;
-        if(m.deletedIds?.length) state.deletedIds = m.deletedIds;
+        // Foren lokale og serverens slettede id'er, så en sletning fra en anden enhed (fx
+        // stemmestyring på væg-skærmen) ikke går tabt, og fjern dem fra listen med det samme.
+        if(m.deletedIds?.length) {
+          const del = new Set([...(state.deletedIds||[]), ...m.deletedIds].map(String));
+          state.deletedIds = [...del].map(x=>isNaN(x)?x:Number(x));
+          state.projects = state.projects.filter(p=>!del.has(String(p.id)));
+        }
       }
     }
     // SoMe-følgertal (efter system_state, så deletedIds fra serveren er med): server-rækker +
@@ -3358,6 +3365,12 @@ function deleteProject(id) {
     ? `Slet opgave og ${children.length} delopgave${children.length!==1?'r':''}?`
     : 'Slet opgave?';
   if(!confirm(msg)) return;
+  removeProjectAndChildren(id);
+}
+
+// Sletter en opgave + dens delopgaver uden at spørge (bruges af deleteProject og stemmestyringen)
+function removeProjectAndChildren(id) {
+  const children = state.projects.filter(x=>x.parentId===id);
   const idsToDelete = [id, ...children.map(c=>c.id)];
   state.projects = state.projects.filter(x=>!idsToDelete.includes(x.id));
   idsToDelete.forEach(did => delete state.diaryEntries[did]);
@@ -5914,6 +5927,43 @@ function toggleFab() {
 function closeFab() {
   document.getElementById('fab-wrap').classList.remove('open');
 }
+
+// ── STEMMESTYRING (js/voice.js) ──
+NootyVoice.init({
+  getTasks: () => state.projects,
+  types: OPGAVE_TYPES,
+  getConfig: () => ({ url: SUPABASE_URL, key: SUPABASE_KEY }),
+  position: { right: '88px', bottom: '24px' }, // til venstre for FAB'en
+  create(f, parentId) {
+    const parent = parentId ? state.projects.find(x=>x.id===parentId) : null;
+    const type = f.type || parent?.type || 'andet';
+    const underkat = f.underkat || parent?.underkat || getUnderkategorier(type)[0];
+    finaliseProject({
+      id:newId(), title:f.title, desc:f.desc||'', prio:f.prio||'mid', procestrin:'',
+      type, underkat, parentId: parentId || null,
+      deadline:f.deadline||'', deadlineFinal:'', color:getOpgaveType(type).color,
+      links:[], onedrive:'', done:false, createdAt:new Date().toISOString(),
+    });
+  },
+  update(id, f) {
+    const p = state.projects.find(x=>x.id===id);
+    if(!p) return;
+    ['title','desc','deadline','prio','underkat'].forEach(k=>{ if(k in f) p[k]=f[k]; });
+    if(f.type && f.type!==p.type) {
+      p.type = f.type; p.color = getOpgaveType(f.type).color;
+      if(!f.underkat) p.underkat = getUnderkategorier(f.type)[0];
+    }
+    if('done' in f && f.done!==!!p.done) { p.done=f.done; p.doneAt=f.done?new Date().toISOString():null; }
+    save(); renderProjects(); renderDashboard(); updateBadge(); renderDiary();
+    toast(`✓ "${p.title}" opdateret`);
+    if(f.done===true) { showRitual(); updateFocusScore(); }
+  },
+  remove(id) {
+    const title = state.projects.find(x=>x.id===id)?.title || 'Opgave';
+    removeProjectAndChildren(id);
+    toast(`🗑 "${title}" slettet`);
+  },
+});
 
 // ── INIT ──
 initStorage().then(() => {

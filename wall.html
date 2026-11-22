@@ -386,6 +386,7 @@
   </div>
 </div>
 
+<script src="js/voice.js"></script>
 <script>
 // ══════════════════════════ DATA MODEL (delt med desktop/mobil-Nooty) ══════════════════════════
 const OPGAVE_TYPES = [
@@ -1498,6 +1499,75 @@ document.addEventListener('visibilitychange', ()=>{
 // ══════════════════════════ AUTO-OPDATERING ══════════════════════════
 const REFRESH_MS = 15000;
 setInterval(()=>{ if(sbReady) loadFromSupabase(); }, REFRESH_MS);
+
+// ══════════════════════════ STEMMESTYRING (js/voice.js) ══════════════════════════
+// Sletninger skrives også i system_state.meta.deletedIds, så index.html på andre enheder
+// ikke genopretter opgaven fra sin lokale kopi.
+// Underkategorier (samme som OPGAVE_TYPES i index.html – hold dem i sync)
+const VOICE_UNDERKAT = {
+  vaeresteds:['Artikel','Administrativt','Andet'],
+  projekt:['Craft','Sundhed','Natur','Det Digitale Værested','Andet'],
+  aktivitet:['Sport for Livet','Ferie Camp','Royal Side Run','Landsmøde','Folkemøde','Den Nationale Værestedsdag','Temadage','Andet'],
+  kommunikation:['Website','Nyhedsbrev','Presse','Intern','SoMe'],
+  andet:['Andet'],
+};
+const VOICE_TYPES = OPGAVE_TYPES.map(t=>({ id:t.id, navn:t.navn, color:t.color, underkategorier: VOICE_UNDERKAT[t.id]||['Andet'] }));
+function voiceType(id){ return VOICE_TYPES.find(t=>t.id===id) || VOICE_TYPES[VOICE_TYPES.length-1]; }
+async function wallAddDeletedIds(ids){
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/system_state?key=eq.meta&select=*`, { headers:sbHeaders() });
+    const rows = r.ok ? await r.json() : [];
+    let meta = rows[0]?.value || {};
+    if(typeof meta === 'string'){ try{ meta = JSON.parse(meta); }catch(e){ meta = {}; } }
+    const del = new Set([...(meta.deletedIds||[]), ...ids].map(String));
+    meta.deletedIds = [...del].map(x=>isNaN(x)?x:Number(x));
+    await fetch(`${SUPABASE_URL}/rest/v1/system_state`, { method:'POST', headers:sbHeaders(), body: JSON.stringify([{ key:'meta', value: meta }]) });
+  }catch(e){ console.warn('deletedIds-opdatering fejlede:', e); }
+}
+NootyVoice.init({
+  getTasks: () => state.projects,
+  types: VOICE_TYPES,
+  getConfig: () => ({ url: SUPABASE_URL, key: SUPABASE_KEY }),
+  position: { right: 'calc(96px + var(--safe-r))', bottom: 'calc(28px + var(--safe-b))' }, // til venstre for ⚡
+  async create(f, parentId){
+    const parent = parentId ? state.projects.find(x=>x.id===parentId) : null;
+    const type = f.type || parent?.type || 'andet';
+    const t = voiceType(type);
+    const p = {
+      id: Date.now()*1000 + Math.floor(Math.random()*1000), title: f.title, desc: f.desc||'', prio: f.prio||'mid',
+      procestrin:'', type, underkat: f.underkat || parent?.underkat || (t.underkategorier||['Andet'])[0],
+      parentId: parentId || null, deadline: f.deadline||'', deadlineFinal:'', color: t.color,
+      links:[], onedrive:'', done:false, createdAt: new Date().toISOString(),
+    };
+    state.projects.push(p);
+    renderCurrentView();
+    await sbUpsert(p);
+    toast(`✓ "${p.title}" oprettet`);
+  },
+  async update(id, f){
+    const p = state.projects.find(x=>x.id===id);
+    if(!p) return;
+    ['title','desc','deadline','prio','underkat'].forEach(k=>{ if(k in f) p[k]=f[k]; });
+    if(f.type && f.type!==p.type){
+      const t = voiceType(f.type);
+      p.type = f.type; p.color = t.color;
+      if(!f.underkat) p.underkat = (t.underkategorier||['Andet'])[0];
+    }
+    if('done' in f && f.done!==!!p.done){ p.done = f.done; p.doneAt = f.done ? new Date().toISOString() : null; }
+    renderCurrentView();
+    await sbUpsert(p);
+    toast(`✓ "${p.title}" opdateret`);
+  },
+  async remove(id){
+    const p = state.projects.find(x=>x.id===id);
+    const ids = [id, ...state.projects.filter(x=>x.parentId===id).map(x=>x.id)];
+    state.projects = state.projects.filter(x=>!ids.includes(x.id));
+    renderCurrentView();
+    await Promise.all(ids.map(did=>fetch(`${SUPABASE_URL}/rest/v1/projects?id=eq.${did}`, { method:'DELETE', headers:sbHeaders() }).catch(e=>console.warn('Supabase delete error:', e))));
+    await wallAddDeletedIds(ids);
+    toast(`🗑 "${p?.title||'Opgave'}" slettet`);
+  },
+});
 
 // ══════════════════════════ INIT ══════════════════════════
 (function init(){

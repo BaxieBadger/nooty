@@ -336,6 +336,17 @@
     // ("kommunikation"). Match på begge, uden forskel på store/små bogstaver.
     const norm = s => String(s || '').trim().toLowerCase();
     const types = opts.types || [];
+    const findType = v => types.find(x => norm(x.id) === norm(v) || norm(x.navn) === norm(v));
+    // "Kommunikation / Intern" i ét felt → del op i type og underkategori
+    for (const k of ['type', 'underkat']) {
+      if (out[k] && /[\/>]/.test(out[k])) {
+        const [a, b] = String(out[k]).split(/\s*[\/>]\s*/);
+        if (findType(a)) { out.type = a; if (b) out.underkat = b; }
+      }
+    }
+    // Lagde Gemini typen i underkategori-feltet ("kategorien" → underkat), så flyt den over
+    if (out.underkat && !out.type && findType(out.underkat)) { out.type = out.underkat; delete out.underkat; }
+    if (out.type && out.underkat && norm(out.underkat) === norm(findType(out.type)?.navn)) delete out.underkat;
     if (out.type) {
       const t = types.find(x => norm(x.id) === norm(out.type) || norm(x.navn) === norm(out.type));
       if (t) out.type = t.id; else { delete out.type; delete out.underkat; }

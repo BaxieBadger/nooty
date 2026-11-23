@@ -108,6 +108,9 @@ Handlinger:
 Regler:
 - Ved update/delete SKAL targetId være et id fra listen nedenfor (fx "T3"). Match på betydning, ikke kun ordret titel. Gæt aldrig et id der ikke står på listen.
 - "Flyt X til <type>" eller "X skal ligge under <type>" er en update af type (og evt. underkat). "Flyt X til <dato>" er en update af deadline.
+- Brugeren kalder typen for "kategori", "type" eller "område". Ord som "kategorien til Kommunikation" betyder fields.type = "kommunikation". fields.underkat bruges KUN til underkategorier fra listen (fx "Intern", "SoMe"), aldrig til en type.
+- fields.type skal være typens id fra listen (fx "kommunikation"), ikke dens navn.
+- Ved update SKAL mindst ét felt i fields være udfyldt med det, der ændres.
 - Har flere opgaver samme titel, så vælg hovedopgaven frem for en delopgave, og den med delopgaver frem for en uden – medmindre brugeren siger andet.
 - Medtag kun de felter brugeren faktisk nævner. Opfind ikke deadline eller prioritet.
 - Titler skrives kort og naturligt med stort begyndelsesbogstav, uden "ny opgave:" foran.

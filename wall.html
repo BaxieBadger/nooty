@@ -1583,14 +1583,20 @@ NootyVoice.init({
     const p = state.projects.find(x=>x.id===id);
     if(!p) return;
     ['title','desc','deadline','prio','underkat'].forEach(k=>{ if(k in f) p[k]=f[k]; });
+    const moved = [];
     if(f.type && f.type!==p.type){
       const t = voiceType(f.type);
+      const oldType = p.type;
       p.type = f.type; p.color = t.color;
       if(!f.underkat) p.underkat = (t.underkategorier||['Andet'])[0];
+      // Delopgaver der lå under samme type som hovedopgaven, flytter med
+      state.projects.filter(c=>c.parentId===p.id && c.type===oldType).forEach(c=>{
+        c.type = p.type; c.underkat = p.underkat; c.color = p.color; moved.push(c);
+      });
     }
     if('done' in f && f.done!==!!p.done){ p.done = f.done; p.doneAt = f.done ? new Date().toISOString() : null; }
     renderCurrentView();
-    await sbUpsert(p);
+    await Promise.all([p, ...moved].map(sbUpsert));
     toast(`✓ "${p.title}" opdateret`);
   },
   async remove(id){

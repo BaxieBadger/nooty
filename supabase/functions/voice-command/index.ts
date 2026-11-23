@@ -210,11 +210,32 @@ Deno.serve(async (req) => {
     return json({ error: "Kunne ikke læse svaret fra Gemini", detail: text.slice(0, 500) }, 502);
   }
 
+  // Synligt under Edge Functions → voice-command → Logs, så fejl kan spores.
+  console.log("Gemini svar:", JSON.stringify({
+    intent: action.intent, targetId: action.targetId, parentId: action.parentId,
+    fields: action.fields, tasksSent: tasks.length,
+  }));
+
   if (action.targetId != null) action.targetId = unalias(action.targetId);
   if (action.parentId != null) action.parentId = unalias(action.parentId);
 
   // Sikkerhedsnet: update/delete må kun pege på et id, vi faktisk har sendt med.
   const ids = new Set(tasks.map((t) => String(t.id)));
+
+  // Reserve: passer id'et ikke, så find opgaven ud fra en titel, der står ordret i det sagte.
+  if ((action.intent === "update" || action.intent === "delete") && !ids.has(String(action.targetId))) {
+    const said = String(action.transcript || "").toLowerCase();
+    const kids = new Set(tasks.filter((t) => t.parentId).map((t) => String(t.parentId)));
+    let hits = tasks.filter((t) => t.title && t.title.length >= 4 && said.includes(t.title.toLowerCase()));
+    // Kortere titler, der er en del af en længere match, fjernes ("Foliering" vs. "Foliering af varevogn")
+    hits = hits.filter((h) => !hits.some((o) => o !== h && o.title.length > h.title.length && o.title.toLowerCase().includes(h.title.toLowerCase())));
+    if (hits.length > 1) { const top = hits.filter((t) => !t.parentId); if (top.length) hits = top; }
+    if (hits.length > 1) { const withKids = hits.filter((t) => kids.has(String(t.id))); if (withKids.length) hits = withKids; }
+    if (hits.length === 1) {
+      console.log("Titel-reserve valgte:", hits[0].title);
+      action.targetId = String(hits[0].id);
+    }
+  }
   if ((action.intent === "update" || action.intent === "delete") && !ids.has(String(action.targetId))) {
     action.intent = "unclear";
     action.question = action.question || "Jeg kunne ikke finde opgaven. Prøv at sige titlen mere præcist.";

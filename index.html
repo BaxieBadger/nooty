@@ -5952,8 +5952,13 @@ NootyVoice.init({
     if(!p) return;
     ['title','desc','deadline','prio','underkat'].forEach(k=>{ if(k in f) p[k]=f[k]; });
     if(f.type && f.type!==p.type) {
+      const oldType = p.type;
       p.type = f.type; p.color = getOpgaveType(f.type).color;
       if(!f.underkat) p.underkat = getUnderkategorier(f.type)[0];
+      // Delopgaver der lå under samme type som hovedopgaven, flytter med
+      state.projects.filter(c=>c.parentId===p.id && c.type===oldType).forEach(c=>{
+        c.type = p.type; c.underkat = p.underkat; c.color = p.color;
+      });
     }
     if('done' in f && f.done!==!!p.done) { p.done=f.done; p.doneAt=f.done?new Date().toISOString():null; }
     save(); renderProjects(); renderDashboard(); updateBadge(); renderDiary();

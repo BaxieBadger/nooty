@@ -299,7 +299,17 @@
       const kids = (opts.getTasks() || []).filter(p => String(p.parentId) === String(target.id)).length;
       if (kids) rows.push(['OBS', `${kids} delopgave${kids !== 1 ? 'r' : ''} slettes også`]);
     }
-    if (a.intent !== 'delete') rows.push(...detailRows(a.fields, a.intent));
+    // Vis præcis det, der bliver gemt (efter oprydning), så boksen aldrig lover mere end der sker
+    const effective = a.intent === 'delete' ? {} : cleanFields(a.fields);
+    if (a.intent === 'update' && !Object.keys(effective).length) {
+      showPanel(`<div class="nv-kind">Forstod ikke helt</div>
+        <div class="nv-summary">Jeg fandt "${esc(target?.title || 'opgaven')}", men forstod ikke, hvad der skulle ændres.</div>${transcript}
+        <div class="nv-actions"><button type="button" data-nv="close">Luk</button><button type="button" class="ok" data-nv="again">Prøv igen</button></div>`);
+      panel.querySelector('[data-nv=close]').onclick = hidePanel;
+      panel.querySelector('[data-nv=again]').onclick = () => { hidePanel(); onClick(); };
+      return;
+    }
+    if (a.intent !== 'delete') rows.push(...detailRows(effective, a.intent));
     const okLabel = { create: 'Opret', update: 'Gem', delete: 'Slet' }[a.intent];
     const subList = subs.length
       ? `<div class="nv-kind" style="margin-top:4px">Delopgaver (${subs.length})</div>
@@ -322,7 +332,21 @@
       if (src[k] !== undefined && src[k] !== null) out[k] = src[k];
     }
     if (out.deadline && !/^\d{4}-\d{2}-\d{2}$/.test(out.deadline)) delete out.deadline;
-    if (out.type && !(opts.types || []).some(t => t.id === out.type)) { delete out.type; delete out.underkat; }
+    // Gemini svarer nogle gange med typens navn ("Kommunikation") i stedet for id'et
+    // ("kommunikation"). Match på begge, uden forskel på store/små bogstaver.
+    const norm = s => String(s || '').trim().toLowerCase();
+    const types = opts.types || [];
+    if (out.type) {
+      const t = types.find(x => norm(x.id) === norm(out.type) || norm(x.navn) === norm(out.type));
+      if (t) out.type = t.id; else { delete out.type; delete out.underkat; }
+    }
+    if (out.underkat) {
+      // Underkategorien skal findes under den (nye) type; ellers droppes den
+      const t = out.type ? types.find(x => x.id === out.type) : null;
+      const list = t ? (t.underkategorier || []) : types.flatMap(x => x.underkategorier || []);
+      const u = list.find(x => norm(x) === norm(out.underkat));
+      if (u) out.underkat = u; else delete out.underkat;
+    }
     return out;
   }
 

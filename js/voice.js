@@ -214,8 +214,10 @@
   async function process(blob) {
     busy = true;
     btn.classList.add('busy');
+    let stage = 'lyd';
     try {
       const audio = await toWavBase64(blob);
+      stage = 'net';
       const now = new Date();
       const cfg = opts.getConfig();
       const res = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/voice-command`, {
@@ -230,14 +232,21 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const hint = res.status === 404 ? 'Edge Function "voice-command" er ikke deployet endnu.' : (data.error || `Fejl ${res.status}`);
-        showMessage('Noget gik galt', hint);
+        let hint = data.error || data.message || data.msg || `Fejl ${res.status}`;
+        if (res.status === 404) hint = 'Edge Function "voice-command" findes ikke – tjek navnet i Supabase.';
+        if (res.status === 401) hint = 'Supabase afviste nøglen (401). Slå "Verify JWT" fra på funktionen.';
+        if (data.detail) hint += ' – ' + String(data.detail).slice(0, 200);
+        showMessage(`Noget gik galt (${res.status})`, hint);
         return;
       }
       showConfirm(data);
     } catch (e) {
-      console.warn('NootyVoice:', e);
-      showMessage('Noget gik galt', 'Kunne ikke behandle optagelsen. Prøv igen.');
+      console.warn('NootyVoice:', stage, e);
+      const why = `${e && e.name ? e.name + ': ' : ''}${e && e.message ? e.message : e}`;
+      showMessage('Noget gik galt',
+        stage === 'lyd'
+          ? `Browseren kunne ikke læse optagelsen (${blob.type || 'ukendt format'}, ${Math.round(blob.size / 1024)} KB). ${why}`
+          : `Kunne ikke nå Supabase-funktionen "voice-command". Er den deployet, og hedder den præcis sådan? (${why})`);
     } finally {
       busy = false;
       btn.classList.remove('busy');

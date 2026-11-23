@@ -7,7 +7,7 @@
 //
 // Deploy via dashboardet: Edge Functions → Deploy a new function → navn "voice-command"
 // → indsæt denne fil. Sæt derefter secret GEMINI_API_KEY (Edge Functions → Secrets).
-// Valgfrit: GEMINI_MODEL (standard: gemini-2.5-flash).
+// Valgfrit: GEMINI_MODEL (standard: gemini-3.8-flash).
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
 
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) return json({ error: "GEMINI_API_KEY er ikke sat som secret på funktionen." }, 500);
-  const model = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
+  const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
 
   let body: {
     audio?: string; mimeType?: string; today?: string; weekday?: string;

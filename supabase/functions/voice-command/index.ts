@@ -69,14 +69,21 @@ const RESPONSE_SCHEMA = {
   required: ["transcript", "intent", "summary"],
 };
 
-function buildPrompt(today: string, weekday: string, tasks: TaskIn[], types: TypeIn[]) {
+function buildPrompt(
+  today: string, weekday: string, tasks: TaskIn[], types: TypeIn[],
+  alias: (id: string | null | undefined) => string,
+) {
   const typeLines = types
     .map((t) => `- ${t.id} (${t.navn}): underkategorier ${t.underkategorier.join(", ")}`)
     .join("\n");
+  const kidCount = new Map<string, number>();
+  tasks.forEach((t) => { if (t.parentId) kidCount.set(String(t.parentId), (kidCount.get(String(t.parentId)) || 0) + 1); });
   const taskLines = tasks
     .map((t) => {
-      const bits = [`id=${t.id}`, `"${t.title}"`];
-      if (t.parentId) bits.push(`delopgave af id=${t.parentId}`);
+      const bits = [`id=${alias(t.id)}`, `"${t.title}"`];
+      if (t.parentId) bits.push(`delopgave af id=${alias(t.parentId)}`);
+      const kids = kidCount.get(String(t.id));
+      if (kids) bits.push(`har ${kids} delopgave${kids === 1 ? "" : "r"}`);
       if (t.deadline) bits.push(`deadline ${t.deadline}`);
       if (t.type) bits.push(`type ${t.type}${t.underkat ? "/" + t.underkat : ""}`);
       if (t.prio) bits.push(`prio ${t.prio}`);
@@ -99,7 +106,9 @@ Handlinger:
 - unclear: hvis du ikke kan høre det, det ikke er en opgavekommando, eller flere opgaver passer lige godt til update/delete. Forklar kort i question.
 
 Regler:
-- Ved update/delete SKAL targetId være et id fra listen nedenfor. Match på betydning, ikke kun ordret titel. Gæt aldrig et id der ikke står på listen.
+- Ved update/delete SKAL targetId være et id fra listen nedenfor (fx "T3"). Match på betydning, ikke kun ordret titel. Gæt aldrig et id der ikke står på listen.
+- "Flyt X til <type>" eller "X skal ligge under <type>" er en update af type (og evt. underkat). "Flyt X til <dato>" er en update af deadline.
+- Har flere opgaver samme titel, så vælg hovedopgaven frem for en delopgave, og den med delopgaver frem for en uden – medmindre brugeren siger andet.
 - Medtag kun de felter brugeren faktisk nævner. Opfind ikke deadline eller prioritet.
 - Titler skrives kort og naturligt med stort begyndelsesbogstav, uden "ny opgave:" foran.
 - prio: "vigtig/haster/høj" → high, "lav/ikke vigtig" → low, ellers udelad.
@@ -133,7 +142,22 @@ Deno.serve(async (req) => {
   if (!body.audio) return json({ error: "Ingen lyd modtaget" }, 400);
 
   const tasks = (body.tasks || []).slice(0, 500);
-  const prompt = buildPrompt(body.today || "", body.weekday || "", tasks, body.types || []);
+  // Nootys id'er er 16-cifrede tal, som sprogmodeller let kommer til at ændre et ciffer i.
+  // Gemini ser derfor korte aliaser (T1, T2, …), som oversættes tilbage efter svaret.
+  const toAlias = new Map<string, string>();
+  const fromAlias = new Map<string, string>();
+  tasks.forEach((t, i) => {
+    const a = `T${i + 1}`;
+    toAlias.set(String(t.id), a);
+    fromAlias.set(a, String(t.id));
+  });
+  const alias = (id: string | null | undefined) => (id == null ? "" : toAlias.get(String(id)) || String(id));
+  const unalias = (v: unknown) => {
+    if (v == null || v === "") return v;
+    const s = String(v).trim().replace(/^id=/i, "").toUpperCase();
+    return fromAlias.get(s) ?? String(v);
+  };
+  const prompt = buildPrompt(body.today || "", body.weekday || "", tasks, body.types || [], alias);
 
   const requestBody = JSON.stringify({
     contents: [{
@@ -185,6 +209,9 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "Kunne ikke læse svaret fra Gemini", detail: text.slice(0, 500) }, 502);
   }
+
+  if (action.targetId != null) action.targetId = unalias(action.targetId);
+  if (action.parentId != null) action.parentId = unalias(action.parentId);
 
   // Sikkerhedsnet: update/delete må kun pege på et id, vi faktisk har sendt med.
   const ids = new Set(tasks.map((t) => String(t.id)));

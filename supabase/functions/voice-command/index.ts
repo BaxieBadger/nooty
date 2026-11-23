@@ -49,6 +49,20 @@ const RESPONSE_SCHEMA = {
         done: { type: "BOOLEAN" },
       },
     },
+    subtasks: {
+      type: "ARRAY",
+      description: "Kun ved create: delopgaver i den rækkefølge de skal udføres.",
+      items: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING" },
+          deadline: { type: "STRING", description: "YYYY-MM-DD eller udeladt." },
+          prio: { type: "STRING", enum: ["high", "mid", "low"] },
+          desc: { type: "STRING" },
+        },
+        required: ["title"],
+      },
+    },
     summary: { type: "STRING", description: "Kort dansk opsummering af handlingen til en bekræftelsesboks." },
     question: { type: "STRING", description: "Ved unclear: kort dansk forklaring/opfølgende spørgsmål." },
   },
@@ -76,6 +90,10 @@ I dag er ${weekday} ${today}. Omregn relative datoer ("fredag", "i morgen", "om 
 
 Handlinger:
 - create: ny opgave. "Ny opgave", "husk at", "tilføj", "jeg skal" osv. Hvis brugeren siger det er en delopgave/under en eksisterende opgave, sæt parentId.
+  - Nævner brugeren under-/delopgaver eller trin ("der er tre underopgaver", "første...", "derefter..."), læg dem i subtasks – én pr. trin, med egen titel og evt. deadline. Hovedopgaven går i fields.
+  - subtasks skal stå i den rækkefølge, de skal udføres. Retter brugeren rækkefølgen undervejs ("de to skal faktisk være før den anden"), så brug den rettede rækkefølge.
+  - Et trin uden dato ("kan først sætte dato på senere") får ingen deadline.
+  - Vil brugeren tilføje delopgaver til en EKSISTERENDE opgave: intent create, parentId = den opgaves id, fields.title udelades, og delopgaverne lægges i subtasks.
 - update: ændr en eksisterende opgave (titel, deadline, prioritet, type, beskrivelse, eller "marker som færdig" → done=true / "genåbn" → done=false).
 - delete: slet en eksisterende opgave.
 - unclear: hvis du ikke kan høre det, det ikke er en opgavekommando, eller flere opgaver passer lige godt til update/delete. Forklar kort i question.
@@ -86,7 +104,7 @@ Regler:
 - Titler skrives kort og naturligt med stort begyndelsesbogstav, uden "ny opgave:" foran.
 - prio: "vigtig/haster/høj" → high, "lav/ikke vigtig" → low, ellers udelad.
 - type/underkat: brug kun værdier fra listen; udelad hvis det ikke er tydeligt.
-- summary: én kort dansk sætning, fx 'Opret "Ring til trykkeriet" med deadline fredag 27. nov.' eller 'Slet "Bestil lokale".'
+- summary: én kort dansk sætning, fx 'Opret "Ring til trykkeriet" med deadline fredag 27. nov.', 'Opret "Foliering af varevogn" med 4 delopgaver.' eller 'Slet "Bestil lokale".'
 
 Opgavetyper:
 ${typeLines}
@@ -175,7 +193,13 @@ Deno.serve(async (req) => {
     action.question = action.question || "Jeg kunne ikke finde opgaven. Prøv at sige titlen mere præcist.";
   }
   if (action.parentId && !ids.has(String(action.parentId))) delete action.parentId;
-  if (action.intent === "create" && !(action.fields as { title?: string })?.title) {
+  const subtasks = Array.isArray(action.subtasks)
+    ? (action.subtasks as { title?: string }[]).filter((s) => s && s.title)
+    : [];
+  if (action.intent === "create") action.subtasks = subtasks;
+  else delete action.subtasks;
+  const addsToExisting = !!action.parentId && subtasks.length > 0;
+  if (action.intent === "create" && !(action.fields as { title?: string })?.title && !addsToExisting) {
     action.intent = "unclear";
     action.question = action.question || "Jeg fangede ikke, hvad opgaven skal hedde.";
   }

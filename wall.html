@@ -1577,6 +1577,7 @@ NootyVoice.init({
     renderCurrentView();
     await sbUpsert(p);
     toast(`✓ "${p.title}" oprettet`);
+    return p.id; // bruges som parentId, når stemmestyringen opretter delopgaver
   },
   async update(id, f){
     const p = state.projects.find(x=>x.id===id);

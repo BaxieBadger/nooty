@@ -54,6 +54,8 @@
 .nv-summary{font-size:15px;font-weight:600;margin-bottom:8px}
 .nv-details{margin:0 0 10px;padding:0;list-style:none;font-size:13px}
 .nv-details li{padding:2px 0}.nv-details b{font-weight:600;color:var(--text-muted,#82796a);margin-right:4px}
+.nv-subs{margin:0 0 10px;padding-left:20px;font-size:13px}
+.nv-subs li{padding:2px 0}.nv-subs span{color:var(--text-muted,#82796a)}
 .nv-transcript{font-size:12px;color:var(--text-muted,#82796a);font-style:italic;margin-bottom:12px}
 .nv-actions{display:flex;gap:8px}
 .nv-actions button{flex:1;padding:10px 12px;border-radius:9px;border:1px solid var(--border,rgba(0,0,0,.15));
@@ -283,9 +285,14 @@
     }
     const target = a.targetId ? findTask(a.targetId) : null;
     const parent = a.parentId ? findTask(a.parentId) : null;
-    const kind = { create: parent ? 'Ny delopgave' : 'Ny opgave', update: 'Ændr opgave', delete: 'Slet opgave' }[a.intent];
+    const subs = a.intent === 'create' && Array.isArray(a.subtasks) ? a.subtasks.filter(s => s && s.title) : [];
+    const onlySubs = a.intent === 'create' && !a.fields?.title && parent && subs.length;
+    const kind = {
+      create: onlySubs ? 'Nye delopgaver' : parent ? 'Ny delopgave' : 'Ny opgave',
+      update: 'Ændr opgave', delete: 'Slet opgave',
+    }[a.intent];
     const rows = [];
-    if (a.intent === 'create') rows.push(['Titel', a.fields?.title]);
+    if (a.intent === 'create' && !onlySubs) rows.push(['Titel', a.fields?.title]);
     if (parent) rows.push(['Under', parent.title]);
     if (target) rows.push(['Opgave', target.title]);
     if (a.intent === 'delete' && target) {
@@ -294,9 +301,13 @@
     }
     if (a.intent !== 'delete') rows.push(...detailRows(a.fields, a.intent));
     const okLabel = { create: 'Opret', update: 'Gem', delete: 'Slet' }[a.intent];
+    const subList = subs.length
+      ? `<div class="nv-kind" style="margin-top:4px">Delopgaver (${subs.length})</div>
+         <ol class="nv-subs">${subs.map(s => `<li>${esc(s.title)}${s.deadline ? ` <span>· ${esc(fmtDate(s.deadline))}</span>` : ''}${s.prio === 'high' ? ' <span>· Høj</span>' : ''}</li>`).join('')}</ol>`
+      : '';
     showPanel(`<div class="nv-kind ${a.intent === 'delete' ? 'delete' : ''}">${kind}</div>
       <div class="nv-summary">${esc(a.summary)}</div>
-      <ul class="nv-details">${rows.map(([k, v]) => `<li><b>${esc(k)}:</b>${esc(v)}</li>`).join('')}</ul>${transcript}
+      <ul class="nv-details">${rows.map(([k, v]) => `<li><b>${esc(k)}:</b>${esc(v)}</li>`).join('')}</ul>${subList}${transcript}
       <div class="nv-actions"><button type="button" data-nv="cancel">Annuller</button>
       <button type="button" class="ok ${a.intent === 'delete' ? 'delete' : ''}" data-nv="ok">${okLabel}</button></div>`);
     panel.querySelector('[data-nv=cancel]').onclick = hidePanel;
@@ -315,10 +326,22 @@
     return out;
   }
 
-  function apply(a) {
+  async function apply(a) {
     try {
       const fields = cleanFields(a.fields);
-      if (a.intent === 'create') opts.create(fields, a.parentId ? findTask(a.parentId)?.id ?? null : null);
+      if (a.intent === 'create') {
+        const parentId = a.parentId ? findTask(a.parentId)?.id ?? null : null;
+        const subs = (Array.isArray(a.subtasks) ? a.subtasks : []).filter(s => s && s.title);
+        // Uden titel men med parentId: tilføj kun delopgaver til en eksisterende opgave
+        let ownerId = parentId;
+        if (fields.title) ownerId = await opts.create(fields, parentId);
+        if (ownerId == null && subs.length) throw new Error('Kunne ikke finde hovedopgaven til delopgaverne');
+        // Delopgaver arver type/underkategori fra hovedopgaven (host'en sørger for det via parentId)
+        for (const s of subs) {
+          await opts.create(cleanFields({ title: s.title, deadline: s.deadline, prio: s.prio, desc: s.desc }), ownerId);
+        }
+        return;
+      }
       else if (a.intent === 'update') { const t = findTask(a.targetId); if (t) opts.update(t.id, fields); }
       else if (a.intent === 'delete') { const t = findTask(a.targetId); if (t) opts.remove(t.id); }
     } catch (e) {

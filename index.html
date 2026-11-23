@@ -5938,12 +5938,14 @@ NootyVoice.init({
     const parent = parentId ? state.projects.find(x=>x.id===parentId) : null;
     const type = f.type || parent?.type || 'andet';
     const underkat = f.underkat || parent?.underkat || getUnderkategorier(type)[0];
-    finaliseProject({
+    const p = {
       id:newId(), title:f.title, desc:f.desc||'', prio:f.prio||'mid', procestrin:'',
       type, underkat, parentId: parentId || null,
       deadline:f.deadline||'', deadlineFinal:'', color:getOpgaveType(type).color,
       links:[], onedrive:'', done:false, createdAt:new Date().toISOString(),
-    });
+    };
+    finaliseProject(p);
+    return p.id; // bruges som parentId, når stemmestyringen opretter delopgaver
   },
   update(id, f) {
     const p = state.projects.find(x=>x.id===id);

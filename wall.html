@@ -386,6 +386,8 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/realtime.js"></script>
 <script src="js/voice.js"></script>
 <script>
 // ══════════════════════════ DATA MODEL (delt med desktop/mobil-Nooty) ══════════════════════════
@@ -1456,6 +1458,7 @@ function saveSettings(){
   toast('Forbundet – henter data...');
   renderShell();
   loadFromSupabase();
+  startLive();
   spotifyPoll();
 }
 
@@ -1493,12 +1496,43 @@ async function requestWakeLock(){
   catch(e){ console.warn('Wake Lock fejlede:', e); }
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible'){ requestWakeLock(); loadFromSupabase(); }
+  if(document.visibilityState === 'visible'){ requestWakeLock(); fullReload(); }
 });
 
-// ══════════════════════════ AUTO-OPDATERING ══════════════════════════
-const REFRESH_MS = 15000;
-setInterval(()=>{ if(sbReady) loadFromSupabase(); }, REFRESH_MS);
+// ══════════════════════════ AUTO-OPDATERING (Supabase Realtime) ══════════════════════════
+// Tidligere hentede væggen HELE projects + some_posts hvert 15. sekund (≈11.500 kald/døgn),
+// hvilket gav Supabase-advarsler om trafik. Nu hentes alt én gang, og derefter sender
+// Supabase kun de rækker der ændres (js/realtime.js). En fuld genindlæsning hver 30. min.
+// er et sikkerhedsnet; falder Realtime helt ud (supabase-js ikke indlæst), poller vi hvert 5. min.
+const SAFETY_RELOAD_MS = 30*60*1000;
+const FALLBACK_POLL_MS = 5*60*1000;
+let lastFullLoad = 0, liveStarted = false, liveRenderTimer = null;
+function fullReload(){
+  if(!sbReady || Date.now()-lastFullLoad < 20000) return; // undgå dobbelt-hentning (fx synlig + genforbindelse)
+  lastFullLoad = Date.now();
+  loadFromSupabase();
+}
+function onLiveChange(table, type, nw, old){
+  if(table==='projects') NootyRealtime.applyRow(state.projects, type, nw, old, parseRow);
+  else if(table==='some_posts') NootyRealtime.applyRow(state.some, type, nw, old, parseSomeRow);
+  clearTimeout(liveRenderTimer);
+  liveRenderTimer = setTimeout(()=>{
+    localStorage.setItem('nooty_wall_cache', JSON.stringify(state));
+    renderCurrentView();
+  }, 300);
+}
+function startLive(){
+  if(!sbReady || liveStarted) return;
+  liveStarted = true;
+  lastFullLoad = Date.now();
+  const ok = window.NootyRealtime && NootyRealtime.start({
+    url: SUPABASE_URL, key: SUPABASE_KEY,
+    tables: ['projects','some_posts'],
+    onChange: onLiveChange,
+    onReconnect: fullReload,
+  });
+  setInterval(fullReload, ok ? SAFETY_RELOAD_MS : FALLBACK_POLL_MS);
+}
 
 // ══════════════════════════ STEMMESTYRING (js/voice.js) ══════════════════════════
 // Sletninger skrives også i system_state.meta.deletedIds, så index.html på andre enheder
@@ -1573,7 +1607,7 @@ NootyVoice.init({
 (function init(){
   const cached = localStorage.getItem('nooty_wall_cache');
   if(cached){ try{ state = JSON.parse(cached); if(!state.some) state.some=[]; }catch(e){} }
-  if(SUPABASE_URL && SUPABASE_KEY){ sbReady = true; renderShell(); loadFromSupabase(); }
+  if(SUPABASE_URL && SUPABASE_KEY){ sbReady = true; renderShell(); loadFromSupabase(); startLive(); }
   else { renderShell(); }
   syncFullscreenBtn();
   requestWakeLock();

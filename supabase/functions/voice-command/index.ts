@@ -7,7 +7,8 @@
 //
 // Deploy via dashboardet: Edge Functions → Deploy a new function → navn "voice-command"
 // → indsæt denne fil. Sæt derefter secret GEMINI_API_KEY (Edge Functions → Secrets).
-// Valgfrit: GEMINI_MODEL (standard: gemini-3.8-flash).
+// Valgfrit: GEMINI_MODEL (standard: gemini-3.8-flash) og GEMINI_FALLBACK_MODEL
+// (standard: gemini-3.5-flash-lite), som bruges hvis hovedmodellen er overbelastet.
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -116,27 +117,41 @@ Deno.serve(async (req) => {
   const tasks = (body.tasks || []).slice(0, 500);
   const prompt = buildPrompt(body.today || "", body.weekday || "", tasks, body.types || []);
 
-  const gRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
+  const requestBody = JSON.stringify({
+    contents: [{
+      role: "user",
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: body.mimeType || "audio/wav", data: body.audio } },
+      ],
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
+    },
+  });
+  const callGemini = (m: string) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: body.mimeType || "audio/wav", data: body.audio } },
-          ],
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA,
-        },
-      }),
-    },
-  );
+      body: requestBody,
+    });
+
+  // Gemini svarer 503 (overbelastet) eller 429 (for mange kald) i perioder. Prøv igen
+  // efter en kort pause, og skift derefter til en reservemodel.
+  const fallback = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-3.5-flash-lite";
+  const attempts = [model, model, fallback];
+  let gRes!: Response;
+  for (let i = 0; i < attempts.length; i++) {
+    gRes = await callGemini(attempts[i]);
+    if (gRes.status !== 503 && gRes.status !== 429 && gRes.status !== 500) break;
+    console.warn(`Gemini ${gRes.status} på ${attempts[i]} (forsøg ${i + 1})`);
+    if (i < attempts.length - 1) {
+      await gRes.body?.cancel();
+      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+    }
+  }
 
   if (!gRes.ok) {
     const detail = await gRes.text().catch(() => "");
